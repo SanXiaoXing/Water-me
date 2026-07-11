@@ -25,16 +25,14 @@ docs/
 ├── 06-TaskList.md              # 开发任务拆分
 │
 ├── adr/                        # Architecture Decision Record
-│   ├── ADR-0001-Why-Tauri2.md
-│   ├── ADR-0002-Activity-Engine.md
-│   ├── ADR-0003-Overlay-Window.md
-│   ├── ADR-0004-EventBus.md
+│   ├── ADR-0001-Working-Timer.md
+│   ├── ADR-0002-Per-Activity-Timer.md
+│   ├── ADR-0003-Event-Bus.md
+│   ├── ADR-0004-Storage-JSONL.md
+│   ├── ADR-0005-Overlay-Destroy-On-Close.md
+│   ├── ADR-0006-Monotonic-Clock.md
+│   ├── ADR-0007-Health-Activity-Data-Model.md
 │   └── ...
-│
-├── api/                        # 前后端事件与接口约定
-│   ├── events.md
-│   ├── commands.md
-│   └── state-machine.md
 │
 ├── design/                     # 设计文档
 │   └── MVP.md
