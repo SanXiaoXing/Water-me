@@ -155,7 +155,7 @@ Never blame
 Water Me 的终极方向不是一个提醒工具，而是一个健康习惯系统。
 
 ```
-Activity Engine（核心引擎）
+Reminder Engine（核心引擎）
 ↓
 Health Activity（统一行为模型）
 ↓

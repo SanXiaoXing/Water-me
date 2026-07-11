@@ -2,7 +2,7 @@
 
 | 版本 | 目标 | 开发重点 | 预计代码占比 |
 | --- | --- | --- | --- |
-| **V1** | 可用的健康提醒工具 | 活动监测 + Activity Engine + Overlay + 托盘 | **60%** |
+| **V1** | 可用的健康提醒工具 | 活动监测 + Reminder Engine + Overlay + 托盘 | **60%** |
 | **V1.5** | 提升体验 | 配置持久化、动画、开机启动、日志 | **10%** |
 | **V2** | 数据价值 | 每日统计、历史记录、连续打卡 | **10%** |
 | **V3** | 产品特色 | 桌宠模式、情绪状态、角色系统 | **15%** |
@@ -24,9 +24,9 @@
 Water Me
 │
 ├── Activity Monitor    — 活动监测
-├── Activity Engine     — 健康行为引擎
+├── Reminder Engine     — 提醒引擎
+├── Reminder Scheduler  — 提醒调度器
 ├── Notification Window — 提醒窗口（Overlay）
-├── Scheduler           — 工作计时器
 ├── Settings            — 设置
 └── Tray                — 系统托盘
 ```
@@ -39,9 +39,9 @@ Water Me
 
 闲置超过 5 分钟暂停计时，而不是继续倒计时。
 
-### Activity Engine
+### Reminder Engine
 
-决定什么时候触发 Health Activity。
+管理提醒规则、触发时机、提醒状态和提醒生命周期。Health Activity 是它管理的对象。
 
 ```
 Working → 60min → Get Water
@@ -109,10 +109,10 @@ Working Timer，不是 Clock Timer。
 
 ```
 ┌──────────────────────────────┐
-│ Activity Engine（纯 Rust）    │
+│ Reminder Engine（纯 Rust）    │
 │ • 活动监测                    │
 │ • 工作时间统计                │
-│ • Health Activity 规则        │
+│ • 提醒规则                    │
 │ • 状态管理                    │
 └──────────────┬───────────────┘
                │ Event
@@ -133,7 +133,7 @@ Working Timer，不是 Clock Timer。
 ```
 Business
 ↓
-Activity Engine
+Reminder Engine
 ↓
 Notification
 ↓
@@ -183,7 +183,7 @@ Today
 总工作：7h40m
 ```
 
-这些数据 Activity Engine 已经拥有，只是以前没展示。
+这些数据 Reminder Engine 已经拥有，只是以前没展示。
 
 ---
 
@@ -229,7 +229,7 @@ Today
 
 Health Activity 不再固定。新增 Medicine / Stretch / Walk / Meditation / Read / Meeting / Pomodoro。
 
-Activity Engine 统一：`Health Activity Plugin → Condition → Interval → Action`
+Reminder Engine 统一：`Health Activity Plugin → Condition → Interval → Action`
 
 任何 Health Activity 都是插件。
 
