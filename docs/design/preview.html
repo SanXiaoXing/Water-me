@@ -1,0 +1,1566 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Water Me — UI/UX Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Noto+Serif+SC:wght@400;500;600&family=Inter:wght@400;500&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    /* ============================================
+       Design Tokens (mirrored from 05-UIUX.md § 2)
+       ============================================ */
+    :root,
+    [data-theme="light"] {
+      --bg-paper: #F6F2E9;
+      --bg-overlay-mask: rgba(45, 58, 47, 0.42);
+      --bg-card: #FBF8F0;
+      --bg-elevated: #FFFFFF;
+      --ink-primary: #2D3A2F;
+      --ink-secondary: #5C6B5E;
+      --ink-tertiary: #8C978D;
+      --ink-inverse: #F6F2E9;
+      --accent-leaf: #7CA982;
+      --accent-leaf-deep: #4F7A56;
+      --accent-leaf-soft: #D4E4D6;
+      --accent-water: #7AAFC4;
+      --accent-soil: #B58A60;
+      --accent-sun: #E8B860;
+      --border-line: #D9D2C2;
+      --border-card: #E8E0CD;
+      --shadow-card: 0 2px 8px rgba(45, 58, 47, 0.06), 0 1px 2px rgba(45, 58, 47, 0.04);
+      --shadow-elevated: 0 8px 24px rgba(45, 58, 47, 0.10), 0 2px 6px rgba(45, 58, 47, 0.06);
+      --paper-grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.18 0 0 0 0 0.23 0 0 0 0 0.18 0 0 0 0.5 0'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.4'/></svg>");
+      --ease-out-natural: cubic-bezier(0.22, 0.61, 0.36, 1);
+      --ease-in-soft: cubic-bezier(0.55, 0.06, 0.68, 0.19);
+      --ease-in-out-soft: cubic-bezier(0.65, 0, 0.35, 1);
+      --dur-fast: 180ms;
+      --dur-base: 300ms;
+      --dur-loop: 2400ms;
+    }
+
+    [data-theme="dark"] {
+      --bg-paper: #1A211C;
+      --bg-overlay-mask: rgba(8, 12, 9, 0.62);
+      --bg-card: #222A23;
+      --bg-elevated: #2C352E;
+      --ink-primary: #E8E4D8;
+      --ink-secondary: #B5BDB0;
+      --ink-tertiary: #7A8478;
+      --ink-inverse: #1A211C;
+      --accent-leaf: #8FB996;
+      --accent-leaf-deep: #A8C8AE;
+      --accent-leaf-soft: #2E3A30;
+      --accent-water: #8AB8CE;
+      --accent-soil: #C7A085;
+      --accent-sun: #EFC477;
+      --border-line: #3A4438;
+      --border-card: #3A4438;
+      --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.30), 0 1px 2px rgba(0, 0, 0, 0.20);
+      --shadow-elevated: 0 8px 24px rgba(0, 0, 0, 0.40), 0 2px 6px rgba(0, 0, 0, 0.25);
+    }
+
+    /* ============================================
+       Reset & Base
+       ============================================ */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: "Noto Serif SC", "Fraunces", Georgia, serif;
+      background: var(--bg-paper);
+      color: var(--ink-primary);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      background-image: var(--paper-grain);
+      background-blend-mode: multiply;
+      transition: background var(--dur-base) var(--ease-out-natural),
+                  color var(--dur-base) var(--ease-out-natural);
+    }
+    ::selection { background: var(--accent-leaf-soft); color: var(--ink-primary); }
+
+    /* ============================================
+       Layout
+       ============================================ */
+    .page {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 48px 32px 96px;
+    }
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 32px;
+      background: color-mix(in srgb, var(--bg-paper) 90%, transparent);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border-line);
+      margin-bottom: 48px;
+    }
+    .topbar__brand {
+      display: flex; align-items: center; gap: 12px;
+      font-family: "Fraunces", serif;
+      font-weight: 500; font-size: 18px;
+      letter-spacing: 0.02em;
+    }
+    .topbar__brand .logo-dot {
+      width: 12px; height: 12px; border-radius: 50%;
+      background: var(--accent-leaf);
+    }
+    .topbar__actions { display: flex; gap: 12px; align-items: center; }
+    .pill {
+      font-size: 13px; padding: 6px 12px;
+      border: 1px solid var(--border-line);
+      border-radius: 999px;
+      background: var(--bg-card);
+      color: var(--ink-secondary);
+      font-family: "Fraunces", serif;
+    }
+
+    .section {
+      margin-bottom: 80px;
+    }
+    .section__head {
+      display: flex; align-items: baseline; gap: 16px;
+      margin-bottom: 24px;
+    }
+    .section__no {
+      font-family: "Fraunces", serif;
+      font-size: 13px; font-style: italic;
+      color: var(--ink-tertiary);
+      letter-spacing: 0.05em;
+    }
+    .section__title {
+      font-family: "Fraunces", "Noto Serif SC", serif;
+      font-size: 24px; font-weight: 500;
+      margin: 0;
+    }
+    .section__sub {
+      color: var(--ink-secondary);
+      font-size: 14px;
+      max-width: 640px;
+    }
+    .divider {
+      width: 40px; height: 1px;
+      background: var(--border-line);
+      margin: 16px 0 24px;
+    }
+
+    /* ============================================
+       Token Cards
+       ============================================ */
+    .grid { display: grid; gap: 16px; }
+    .grid--swatches { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+    .grid--components { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+    .grid--windows { grid-template-columns: repeat(auto-fit, minmax(560px, 1fr)); }
+
+    .swatch {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: var(--shadow-card);
+      transition: transform var(--dur-fast) var(--ease-out-natural),
+                  box-shadow var(--dur-fast) var(--ease-out-natural);
+    }
+    .swatch:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-elevated);
+    }
+    .swatch__chip {
+      height: 88px;
+      position: relative;
+    }
+    .swatch__chip::after {
+      content: ""; position: absolute; inset: 0;
+      background: var(--paper-grain);
+      opacity: 0.06;
+      pointer-events: none;
+    }
+    .swatch__body { padding: 12px 14px; }
+    .swatch__name {
+      font-family: "Fraunces", serif;
+      font-size: 13px; font-weight: 500;
+      color: var(--ink-primary);
+    }
+    .swatch__val {
+      font-family: "Inter", monospace;
+      font-size: 11px;
+      color: var(--ink-tertiary);
+      margin-top: 2px;
+    }
+
+    /* Type scale preview */
+    .type-row {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      align-items: baseline;
+      gap: 24px;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--border-line);
+    }
+    .type-row:last-child { border-bottom: none; }
+    .type-row__label {
+      font-family: "Fraunces", serif;
+      font-size: 12px; font-style: italic;
+      color: var(--ink-tertiary);
+    }
+    .type-row__demo {
+      color: var(--ink-primary);
+    }
+
+    /* Spacing ruler */
+    .spacing-row {
+      display: flex; align-items: center; gap: 16px;
+      padding: 8px 0;
+    }
+    .spacing-row__name {
+      font-family: "Fraunces", serif;
+      font-size: 12px;
+      color: var(--ink-tertiary);
+      width: 100px;
+    }
+    .spacing-row__bar {
+      height: 12px;
+      background: var(--accent-leaf);
+      border-radius: 2px;
+    }
+    .spacing-row__val {
+      font-family: "Inter", monospace;
+      font-size: 11px;
+      color: var(--ink-secondary);
+    }
+
+    /* ============================================
+       Component Library
+       ============================================ */
+    .demo {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 6px;
+      padding: 24px;
+      box-shadow: var(--shadow-card);
+      position: relative;
+    }
+    .demo::before {
+      content: ""; position: absolute; inset: 0;
+      background: var(--paper-grain);
+      opacity: 0.05;
+      border-radius: inherit; pointer-events: none;
+    }
+    .demo__title {
+      font-family: "Fraunces", serif;
+      font-size: 13px; font-style: italic;
+      color: var(--ink-tertiary);
+      margin: 0 0 16px;
+      letter-spacing: 0.05em;
+    }
+    .demo__row {
+      display: flex; gap: 12px; flex-wrap: wrap;
+      align-items: center;
+    }
+    .demo__stack { display: flex; flex-direction: column; gap: 12px; }
+
+    /* Buttons */
+    .btn {
+      font-family: "Noto Serif SC", "Fraunces", serif;
+      font-size: 15px; font-weight: 500;
+      line-height: 1;
+      padding: 14px 24px;
+      border-radius: 4px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: background var(--dur-fast) var(--ease-out-natural),
+                  transform var(--dur-fast) var(--ease-out-natural),
+                  box-shadow var(--dur-fast) var(--ease-out-natural);
+      background: transparent;
+      color: var(--ink-primary);
+    }
+    .btn--primary {
+      background: var(--accent-leaf);
+      color: var(--ink-inverse);
+      box-shadow: var(--shadow-card);
+    }
+    .btn--primary:hover {
+      background: var(--accent-leaf-deep);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-elevated);
+    }
+    .btn--primary:active {
+      transform: translateY(0) scale(0.97);
+      box-shadow: var(--shadow-card);
+    }
+    .btn--secondary {
+      background: transparent;
+      color: var(--ink-primary);
+      border-color: var(--border-line);
+    }
+    .btn--secondary:hover {
+      background: var(--accent-leaf-soft);
+      border-color: var(--accent-leaf);
+    }
+    .btn--tertiary {
+      background: transparent;
+      color: var(--ink-secondary);
+      padding: 10px 16px;
+      font-size: 13px;
+    }
+    .btn--tertiary:hover { color: var(--ink-primary); }
+    .btn--ghost {
+      padding: 10px 14px;
+      color: var(--ink-secondary);
+    }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    /* Card */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 6px;
+      box-shadow: var(--shadow-card);
+      padding: 24px;
+      position: relative;
+    }
+    .card::before {
+      content: ""; position: absolute; inset: 0;
+      background: var(--paper-grain);
+      opacity: 0.04;
+      border-radius: inherit; pointer-events: none;
+    }
+
+    /* Switch */
+    .switch {
+      position: relative;
+      width: 44px; height: 24px;
+      background: var(--border-line);
+      border-radius: 999px;
+      cursor: pointer;
+      border: none;
+      transition: background var(--dur-fast) var(--ease-out-natural);
+    }
+    .switch::after {
+      content: "";
+      position: absolute; top: 2px; left: 2px;
+      width: 20px; height: 20px;
+      background: var(--bg-paper);
+      border-radius: 50%;
+      box-shadow: var(--shadow-card);
+      transition: transform var(--dur-fast) var(--ease-out-natural);
+    }
+    .switch[aria-checked="true"] { background: var(--accent-leaf); }
+    .switch[aria-checked="true"]::after { transform: translateX(20px); }
+
+    /* Slider */
+    .slider-wrap { padding: 8px 0; }
+    .slider {
+      -webkit-appearance: none; appearance: none;
+      width: 100%; height: 4px;
+      background: var(--border-line);
+      border-radius: 999px; outline: none;
+    }
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 20px; height: 20px;
+      background: var(--accent-leaf);
+      border: 2px solid var(--bg-paper);
+      border-radius: 50%;
+      cursor: grab;
+      box-shadow: var(--shadow-card);
+      transition: transform var(--dur-fast) var(--ease-out-natural);
+    }
+    .slider::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+      box-shadow: 0 0 0 6px var(--accent-leaf-soft);
+    }
+
+    /* Stepper */
+    .stepper {
+      display: inline-flex; align-items: center; gap: 12px;
+      padding: 8px 12px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-line);
+      border-radius: 4px;
+    }
+    .stepper__btn {
+      width: 28px; height: 28px;
+      display: grid; place-items: center;
+      border: none; background: transparent;
+      border-radius: 2px;
+      color: var(--ink-secondary);
+      cursor: pointer;
+      transition: background var(--dur-fast) var(--ease-out-natural);
+    }
+    .stepper__btn:hover {
+      background: var(--accent-leaf-soft);
+      color: var(--ink-primary);
+    }
+    .stepper__value {
+      font-family: "Fraunces", serif;
+      font-variant-numeric: oldstyle-nums;
+      min-width: 56px; text-align: center;
+      font-size: 16px;
+    }
+
+    /* Plant SVG (inline) */
+    .plant {
+      transform-origin: 50% 90%;
+      animation: sway var(--dur-loop) var(--ease-in-out-soft) infinite;
+    }
+    .plant--thirsty { animation: sway-thirsty 1800ms var(--ease-in-out-soft) infinite; }
+    .plant--done { animation: leaf-lift var(--dur-base) var(--ease-out-natural); }
+    @keyframes sway {
+      0%, 100% { transform: rotate(-2deg); }
+      50% { transform: rotate(2deg); }
+    }
+    @keyframes sway-thirsty {
+      0%, 100% { transform: rotate(-4deg); }
+      50% { transform: rotate(4deg); }
+    }
+    @keyframes leaf-lift {
+      0% { transform: translateY(0) rotate(0); }
+      40% { transform: translateY(-6px) rotate(0); }
+      100% { transform: translateY(0) rotate(0); }
+    }
+    @keyframes sun-glow {
+      0% { opacity: 0; }
+      50% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    /* Stagger animations */
+    @keyframes stagger-rise {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .stagger > * {
+      opacity: 0;
+      animation: stagger-rise var(--dur-base) var(--ease-out-natural) forwards;
+    }
+    .stagger > *:nth-child(1) { animation-delay: 0ms; }
+    .stagger > *:nth-child(2) { animation-delay: 80ms; }
+    .stagger > *:nth-child(3) { animation-delay: 160ms; }
+    .stagger > *:nth-child(4) { animation-delay: 240ms; }
+    .stagger > *:nth-child(5) { animation-delay: 320ms; }
+    .stagger > *:nth-child(6) { animation-delay: 400ms; }
+    .stagger > *:nth-child(7) { animation-delay: 480ms; }
+    .stagger > *:nth-child(8) { animation-delay: 560ms; }
+
+    @keyframes fade-in {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes scale-in {
+      from { opacity: 0; transform: scale(0.96); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    @keyframes slide-up {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulse-prompt {
+      0%, 100% { box-shadow: 0 0 0 0 var(--accent-leaf-soft); }
+      50% { box-shadow: 0 0 0 8px transparent; }
+    }
+
+    /* ============================================
+       Window Frames
+       ============================================ */
+    .win {
+      background: var(--bg-paper);
+      border: 1px solid var(--border-line);
+      border-radius: 8px;
+      box-shadow: var(--shadow-elevated);
+      overflow: hidden;
+      position: relative;
+    }
+    .win--overlay {
+      aspect-ratio: 600 / 420;
+      max-width: 600px;
+    }
+    .win--onboard, .win--settings {
+      aspect-ratio: 480 / 640;
+      max-width: 480px;
+    }
+    .win--tray {
+      max-width: 280px;
+    }
+    .win__chrome {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 14px;
+      background: var(--bg-elevated);
+      border-bottom: 1px solid var(--border-line);
+      font-family: "Inter", monospace;
+      font-size: 11px;
+      color: var(--ink-tertiary);
+    }
+    .win__dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--border-line);
+    }
+    .win__body { padding: 0; position: relative; }
+
+    /* ============================================
+       Overlay Mockup (inside a fake "screen" frame)
+       ============================================ */
+    .overlay-screen {
+      position: relative;
+      background:
+        linear-gradient(135deg, var(--accent-leaf-soft) 0%, transparent 50%),
+        linear-gradient(45deg, color-mix(in srgb, var(--accent-water) 18%, transparent) 0%, transparent 50%),
+        var(--bg-paper);
+      aspect-ratio: 16 / 10;
+      border-radius: 8px;
+      overflow: hidden;
+      display: grid; place-items: center;
+      box-shadow: var(--shadow-elevated);
+    }
+    .overlay-screen__chrome {
+      position: absolute; top: 12px; left: 16px; right: 16px;
+      display: flex; justify-content: space-between;
+      font-family: "Inter", monospace; font-size: 11px;
+      color: var(--ink-tertiary);
+    }
+    .overlay-screen__bg-bars {
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(90deg, var(--border-line) 1px, transparent 1px);
+      background-size: 80px 100%;
+      opacity: 0.15;
+      pointer-events: none;
+    }
+    .overlay-mask {
+      position: absolute; inset: 0;
+      background: var(--bg-overlay-mask);
+      animation: fade-in 300ms var(--ease-out-natural);
+    }
+    .overlay-card {
+      position: relative;
+      width: 600px; max-width: 90%;
+      background: var(--bg-card);
+      border-radius: 8px;
+      box-shadow: var(--shadow-elevated);
+      padding: 48px;
+      animation: slide-up 320ms var(--ease-out-natural) 80ms both;
+    }
+    .overlay-card::before {
+      content: ""; position: absolute; inset: 0;
+      background: var(--paper-grain);
+      opacity: 0.05; border-radius: inherit; pointer-events: none;
+    }
+    .overlay-card__date {
+      position: absolute; top: 20px; left: 28px;
+      font-family: "Fraunces", serif;
+      font-size: 12px; font-style: italic;
+      color: var(--ink-tertiary);
+    }
+    .overlay-card__type {
+      position: absolute; top: 20px; right: 28px;
+      font-family: "Fraunces", serif;
+      font-size: 12px;
+      color: var(--accent-water);
+    }
+    .overlay-card__plant {
+      display: grid; place-items: center;
+      margin: 16px 0 24px;
+    }
+    .overlay-card__title {
+      font-family: "Noto Serif SC", "Fraunces", serif;
+      font-size: 32px; font-weight: 500;
+      text-align: center;
+      margin: 0 0 8px;
+      letter-spacing: 0.02em;
+    }
+    .overlay-card__sub {
+      font-family: "Fraunces", serif;
+      font-style: italic;
+      font-size: 13px;
+      text-align: center;
+      color: var(--ink-secondary);
+      margin: 0 0 16px;
+    }
+    .overlay-card__divider {
+      display: grid; place-items: center; gap: 8px;
+      margin: 16px 0 24px;
+    }
+    .overlay-card__divider::before {
+      content: ""; display: block;
+      width: 40px; height: 1px;
+      background: var(--border-line);
+    }
+    .overlay-card__duration {
+      font-family: "Fraunces", serif;
+      font-variant-numeric: oldstyle-nums;
+      font-size: 14px;
+      color: var(--ink-tertiary);
+    }
+    .overlay-card__actions {
+      display: flex; gap: 12px; justify-content: center;
+      align-items: center;
+      margin-top: 8px;
+    }
+    .btn--pulse {
+      animation: pulse-prompt 1800ms var(--ease-in-out-soft) infinite 1s;
+    }
+
+    /* ============================================
+       Onboard Mockup
+       ============================================ */
+    .onboard {
+      padding: 32px 32px 24px;
+      height: 100%;
+      display: flex; flex-direction: column;
+      position: relative;
+    }
+    .onboard::before {
+      content: ""; position: absolute; top: 0; left: 0; right: 0; height: 8px;
+      background: linear-gradient(90deg, var(--accent-leaf), var(--accent-water));
+    }
+    .onboard__head {
+      display: flex; flex-direction: column; align-items: center;
+      margin-top: 32px;
+    }
+    .onboard__plant { margin: 16px 0 24px; }
+    .onboard__title {
+      font-family: "Noto Serif SC", "Fraunces", serif;
+      font-size: 24px; font-weight: 500;
+      margin: 0;
+    }
+    .onboard__sub {
+      font-family: "Fraunces", serif;
+      font-style: italic;
+      font-size: 13px;
+      color: var(--ink-secondary);
+      margin: 4px 0 0;
+    }
+    .onboard__divider {
+      display: grid; place-items: center; gap: 8px;
+      margin: 16px 0 16px;
+    }
+    .onboard__divider::before {
+      content: ""; display: block;
+      width: 40px; height: 1px;
+      background: var(--border-line);
+    }
+    .onboard__body {
+      font-size: 15px;
+      color: var(--ink-primary);
+      line-height: 1.7;
+      margin: 8px 0 16px;
+    }
+    .onboard__privacy {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-line);
+      border-radius: 6px;
+      padding: 16px 20px;
+      margin: 12px 0 24px;
+    }
+    .onboard__privacy h4 {
+      font-family: "Noto Serif SC", serif;
+      font-size: 14px; font-weight: 500;
+      margin: 0 0 8px;
+    }
+    .onboard__privacy ul {
+      list-style: none; padding: 0; margin: 0;
+      font-size: 13px;
+      color: var(--ink-secondary);
+    }
+    .onboard__privacy li {
+      padding: 3px 0;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .onboard__privacy li::before {
+      content: "•";
+      color: var(--accent-leaf);
+    }
+    .onboard__footer {
+      margin-top: auto;
+      display: flex; gap: 12px; justify-content: flex-end;
+      padding-top: 16px;
+    }
+    .onboard__dots {
+      display: flex; gap: 6px; align-items: center;
+      margin-right: auto;
+    }
+    .onboard__dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--border-line);
+    }
+    .onboard__dot--active {
+      background: var(--accent-leaf);
+      width: 18px; border-radius: 4px;
+    }
+    .onboard__setting {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border-line);
+    }
+    .onboard__setting:last-child { border-bottom: none; }
+    .onboard__setting-label {
+      font-size: 15px; color: var(--ink-primary);
+    }
+    .onboard__setting-desc {
+      font-size: 12px; color: var(--ink-tertiary);
+      display: block; margin-top: 2px;
+    }
+
+    /* ============================================
+       Settings Mockup
+       ============================================ */
+    .settings {
+      padding: 0;
+      height: 100%;
+      display: flex; flex-direction: column;
+    }
+    .settings__head {
+      display: flex; align-items: center; gap: 12px;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-line);
+      background: var(--bg-card);
+    }
+    .settings__back {
+      width: 32px; height: 32px;
+      display: grid; place-items: center;
+      border: none; background: transparent;
+      color: var(--ink-secondary);
+      cursor: pointer; border-radius: 4px;
+    }
+    .settings__back:hover { background: var(--accent-leaf-soft); }
+    .settings__title {
+      font-family: "Noto Serif SC", "Fraunces", serif;
+      font-size: 16px; font-weight: 500;
+      margin: 0;
+    }
+    .settings__body {
+      flex: 1; overflow: auto;
+      padding: 24px 20px;
+    }
+    .settings__section { margin-bottom: 28px; }
+    .settings__section-title {
+      font-family: "Noto Serif SC", serif;
+      font-size: 14px; font-weight: 500;
+      color: var(--ink-secondary);
+      margin: 0 0 8px;
+    }
+    .settings__section-rule {
+      width: 40px; height: 1px;
+      background: var(--border-line);
+      margin-bottom: 12px;
+    }
+    .settings__row {
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border-line);
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px;
+      cursor: pointer;
+      transition: background var(--dur-fast) var(--ease-out-natural);
+      border-radius: 4px;
+      margin: 0 -8px;
+      padding-left: 8px; padding-right: 8px;
+    }
+    .settings__row:hover { background: var(--accent-leaf-soft); }
+    .settings__row-main { flex: 1; min-width: 0; }
+    .settings__row-title {
+      font-size: 15px; color: var(--ink-primary);
+    }
+    .settings__row-desc {
+      font-size: 12px; color: var(--ink-tertiary);
+      display: block; margin-top: 2px;
+    }
+    .settings__row-value {
+      display: flex; align-items: center; gap: 8px;
+      color: var(--ink-secondary);
+      font-family: "Fraunces", serif;
+      font-variant-numeric: oldstyle-nums;
+    }
+    .settings__foot {
+      padding: 12px 20px;
+      border-top: 1px solid var(--border-line);
+      display: flex; justify-content: space-between;
+      font-size: 12px;
+      color: var(--ink-tertiary);
+      background: var(--bg-card);
+    }
+    .settings__foot a {
+      color: var(--ink-secondary);
+      text-decoration: none;
+      border-bottom: 1px dashed var(--border-line);
+    }
+    .settings__foot a:hover { color: var(--accent-leaf); border-color: var(--accent-leaf); }
+
+    /* ============================================
+       Tray Mockup
+       ============================================ */
+    .tray-menu {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-line);
+      border-radius: 6px;
+      padding: 6px;
+      min-width: 220px;
+      box-shadow: var(--shadow-elevated);
+    }
+    .tray-menu__item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 14px;
+      color: var(--ink-primary);
+      cursor: pointer;
+    }
+    .tray-menu__item:hover { background: var(--accent-leaf-soft); }
+    .tray-menu__item--head {
+      font-family: "Fraunces", serif;
+      font-weight: 500;
+      color: var(--ink-secondary);
+      cursor: default;
+      font-size: 13px;
+    }
+    .tray-menu__item--head:hover { background: transparent; }
+    .tray-menu__sep {
+      height: 1px;
+      background: var(--border-line);
+      margin: 4px 8px;
+    }
+    .tray-menu__item--danger { color: var(--ink-secondary); }
+    .tray-menu__item--danger:hover { color: var(--accent-leaf-deep); }
+
+    /* ============================================
+       Copy Examples
+       ============================================ */
+    .copy-example {
+      padding: 16px 20px;
+      background: var(--bg-card);
+      border-left: 2px solid var(--accent-leaf);
+      border-radius: 0 4px 4px 0;
+      margin-bottom: 12px;
+      font-size: 14px;
+      color: var(--ink-primary);
+    }
+    .copy-example__tag {
+      font-family: "Fraunces", serif;
+      font-style: italic;
+      font-size: 11px;
+      color: var(--ink-tertiary);
+      margin-bottom: 4px;
+      letter-spacing: 0.05em;
+    }
+    .copy-example--bad {
+      border-left-color: #C77A7A;
+    }
+    .copy-example--bad .copy-example__tag { color: #C77A7A; }
+
+    /* ============================================
+       Live Demo Overlay
+       ============================================ */
+    .demo-overlay-trigger {
+      text-align: center;
+      padding: 48px 24px;
+    }
+    .demo-overlay {
+      position: fixed; inset: 0;
+      background: var(--bg-overlay-mask);
+      display: none;
+      align-items: center; justify-content: center;
+      z-index: 100;
+      animation: fade-in 300ms var(--ease-out-natural);
+    }
+    .demo-overlay.is-open { display: flex; }
+    .demo-overlay__close {
+      position: absolute; top: 24px; right: 24px;
+      padding: 8px 14px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-line);
+      border-radius: 4px;
+      font-family: "Fraunces", serif;
+      font-size: 12px;
+      cursor: pointer;
+      color: var(--ink-secondary);
+    }
+    .demo-overlay__close:hover { color: var(--ink-primary); }
+
+    /* ============================================
+       Footer
+       ============================================ */
+    .footer {
+      margin-top: 96px;
+      padding-top: 32px;
+      border-top: 1px solid var(--border-line);
+      color: var(--ink-tertiary);
+      font-size: 12px;
+      display: flex; justify-content: space-between;
+      font-family: "Fraunces", serif;
+      font-style: italic;
+    }
+    @media (max-width: 720px) {
+      .page { padding: 24px 16px 64px; }
+      .topbar { padding: 12px 16px; }
+    }
+
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 100ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="topbar__brand">
+      <span class="logo-dot"></span>
+      <span>Water Me · UI Preview</span>
+    </div>
+    <div class="topbar__actions">
+      <span class="pill">Humans need watering, too.</span>
+      <button class="btn btn--ghost" id="themeToggle" aria-label="Toggle theme">
+        <span id="themeIcon">🌙</span> <span id="themeLabel">Dark</span>
+      </button>
+    </div>
+  </div>
+
+  <main class="page">
+
+    <!-- Hero -->
+    <section class="section">
+      <div class="section__head">
+        <span class="section__no">00</span>
+        <h1 class="section__title">像一本摊开的植物志</h1>
+      </div>
+      <div class="divider"></div>
+      <p class="section__sub" style="font-size: 16px; max-width: 720px;">
+        这是一份交互式预览,基于 <code>docs/05-UIUX.md</code>。
+        所有色值、字体、组件、窗口都按照规范实现,可以直接感受最终产品形态。
+        点击右上角切换 Light / Dark 主题,或点击下方按钮触发真实 Overlay 演示。
+      </p>
+      <div class="demo-overlay-trigger">
+        <button class="btn btn--primary" onclick="document.getElementById('liveOverlay').classList.add('is-open')">
+          触发 Overlay 演示
+        </button>
+      </div>
+    </section>
+
+    <!-- 1. Color tokens -->
+    <section class="section">
+      <div class="section__head">
+        <span class="section__no">01</span>
+        <h2 class="section__title">配色 / Color Tokens</h2>
+      </div>
+      <div class="divider"></div>
+      <p class="section__sub">三色基底:嫩叶绿 / 沙土 / 水蓝。Light 走米白纸张,Dark 走夜墨绿。</p>
+
+      <h3 style="font-size: 14px; color: var(--ink-secondary); margin: 24px 0 12px; font-weight: 500;">Light Mode</h3>
+      <div class="grid grid--swatches">
+        <div class="swatch"><div class="swatch__chip" style="background: #F6F2E9"></div><div class="swatch__body"><div class="swatch__name">bg-paper</div><div class="swatch__val">#F6F2E9</div></div></div>
+        <div class="swatch"><div class="swatch__chip" style="background: #FBF8F0"></div><div class="swatch__body"><div class="swatch__name">bg-card</div><div class="swatch__val">#FBF8F0</div></div></div>
+        <div class="swatch"><div class="swatch__chip" style="background: #2D3A2F"></div><div class="swatch__body"><div class="swatch__name">ink-primary</div><div class="swatch__val">#2D3A2F</div></div></div>
+        <div class="swatch"><div class="swatch__chip" style="background: #7CA982"></div><div class="swatch__body"><div class="swatch__name">accent-leaf</div><div class="swatch__val">#7CA982</div></div></div>
+        <div class="swatch"><div class="swatch__chip" style="background: #4F7A56"></div><div class="swatch__body"><div class="swatch__name">leaf-deep</div><div class="swatch__val">#4F7A56</div></div></div>
+        <div class="swatch"><div class="swatch__chip" style="background: #7AAFC4"></div><div class="swatch__body"><div class="swatch__name">accent-water</div><div class="swatch__val">#7AAFC4</div></div></div>
+        <div class="swatch"><div class="swatch__chip" style="background: #B58A60"></div><div class="swatch__body"><div class="swatch__name">accent-soil</div><div class="swatch__val">#B58A60</div></div></div>
+        <div class="swatch"><div class="swatch__chip" style="background: #E8B860"></div><div class="swatch__body"><div class="swatch__name">accent-sun</div><div class="swatch__val">#E8B860</div></div></div>
+      </div>
+    </section>
+
+    <!-- 2. Typography -->
+    <section class="section">
+      <div class="section__head">
+        <span class="section__no">02</span>
+        <h2 class="section__title">字体 / Typography</h2>
+      </div>
+      <div class="divider"></div>
+      <p class="section__sub">Fraunces(英文/数字) + Noto Serif SC(中文)。数字统一 oldstyle figures,带植物志的"手写感"。</p>
+
+      <div class="card" style="margin-top: 24px;">
+        <div class="type-row">
+          <div class="type-row__label">display · 32</div>
+          <div class="type-row__demo" style="font-size: 32px; font-weight: 500; line-height: 1.3;">去给自己接一杯水。</div>
+        </div>
+        <div class="type-row">
+          <div class="type-row__label">h1 · 24</div>
+          <div class="type-row__demo" style="font-size: 24px; font-weight: 500;">Water Me</div>
+        </div>
+        <div class="type-row">
+          <div class="type-row__label">h2 · 20</div>
+          <div class="type-row__demo" style="font-size: 20px; font-weight: 500;">人类,也需要浇水。</div>
+        </div>
+        <div class="type-row">
+          <div class="type-row__label">body-lg · 16</div>
+          <div class="type-row__demo" style="font-size: 16px;">我会在你工作太久的时候,轻轻提醒你照顾自己。</div>
+        </div>
+        <div class="type-row">
+          <div class="type-row__label">body · 15</div>
+          <div class="type-row__demo" style="font-size: 15px;">站起来,顺便活动一下身体。</div>
+        </div>
+        <div class="type-row">
+          <div class="type-row__label">caption · 13</div>
+          <div class="type-row__demo" style="font-size: 13px; color: var(--ink-secondary);">每工作 60 分钟提醒一次。</div>
+        </div>
+        <div class="type-row">
+          <div class="type-row__label">numeric · oldstyle</div>
+          <div class="type-row__demo" style="font-family: 'Fraunces', serif; font-variant-numeric: oldstyle-nums; font-size: 24px;">0123456789</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Spacing & Radius -->
+    <section class="section">
+      <div class="section__head">
+        <span class="section__no">03</span>
+        <h2 class="section__title">间距 & 圆角 / Spacing & Radius</h2>
+      </div>
+      <div class="divider"></div>
+      <p class="section__sub">8px 基线网格。最大圆角 8px,贯彻"植物志书页"调性,远离消费 App 大圆角。</p>
+
+      <div class="grid grid--components" style="margin-top: 24px;">
+        <div class="card">
+          <div class="demo__title">Spacing · 4 · 8 · 12 · 16 · 24 · 32 · 48</div>
+          <div class="spacing-row"><span class="spacing-row__name">--space-1</span><span class="spacing-row__bar" style="width: 4px"></span><span class="spacing-row__val">4</span></div>
+          <div class="spacing-row"><span class="spacing-row__name">--space-2</span><span class="spacing-row__bar" style="width: 8px"></span><span class="spacing-row__val">8</span></div>
+          <div class="spacing-row"><span class="spacing-row__name">--space-3</span><span class="spacing-row__bar" style="width: 12px"></span><span class="spacing-row__val">12</span></div>
+          <div class="spacing-row"><span class="spacing-row__name">--space-4</span><span class="spacing-row__bar" style="width: 16px"></span><span class="spacing-row__val">16</span></div>
+          <div class="spacing-row"><span class="spacing-row__name">--space-5</span><span class="spacing-row__bar" style="width: 20px"></span><span class="spacing-row__val">20</span></div>
+          <div class="spacing-row"><span class="spacing-row__name">--space-6</span><span class="spacing-row__bar" style="width: 24px"></span><span class="spacing-row__val">24</span></div>
+          <div class="spacing-row"><span class="spacing-row__name">--space-8</span><span class="spacing-row__bar" style="width: 32px"></span><span class="spacing-row__val">32</span></div>
+          <div class="spacing-row"><span class="spacing-row__name">--space-12</span><span class="spacing-row__bar" style="width: 48px"></span><span class="spacing-row__val">48</span></div>
+        </div>
+
+        <div class="card">
+          <div class="demo__title">Radius · 2 · 4 · 6 · 8</div>
+          <div class="demo__row" style="gap: 16px;">
+            <div style="width: 56px; height: 56px; background: var(--accent-leaf-soft); border: 1px solid var(--accent-leaf); border-radius: 2px; display: grid; place-items: center; font-size: 11px; color: var(--ink-secondary);">2</div>
+            <div style="width: 56px; height: 56px; background: var(--accent-leaf-soft); border: 1px solid var(--accent-leaf); border-radius: 4px; display: grid; place-items: center; font-size: 11px; color: var(--ink-secondary);">4</div>
+            <div style="width: 56px; height: 56px; background: var(--accent-leaf-soft); border: 1px solid var(--accent-leaf); border-radius: 6px; display: grid; place-items: center; font-size: 11px; color: var(--ink-secondary);">6</div>
+            <div style="width: 56px; height: 56px; background: var(--accent-leaf-soft); border: 1px solid var(--accent-leaf); border-radius: 8px; display: grid; place-items: center; font-size: 11px; color: var(--ink-secondary);">8</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Component Library -->
+    <section class="section">
+      <div class="section__head">
+        <span class="section__no">04</span>
+        <h2 class="section__title">组件库 / Components</h2>
+      </div>
+      <div class="divider"></div>
+      <p class="section__sub">V1 最小集:Button / Card / Switch / Slider / Stepper。全部用 CSS Variables 实现,无任何框架依赖。</p>
+
+      <div class="grid grid--components" style="margin-top: 24px;">
+        <div class="demo">
+          <div class="demo__title">Button · primary / secondary / tertiary</div>
+          <div class="demo__row">
+            <button class="btn btn--primary">我喝了</button>
+            <button class="btn btn--secondary">10 分钟后</button>
+            <button class="btn btn--tertiary">今天跳过</button>
+          </div>
+          <div class="demo__row" style="margin-top: 12px;">
+            <button class="btn btn--primary" disabled>已禁用</button>
+            <button class="btn btn--secondary" disabled>已禁用</button>
+          </div>
+        </div>
+
+        <div class="demo">
+          <div class="demo__title">Switch · 开关</div>
+          <div class="demo__row">
+            <button class="switch" aria-checked="false" onclick="this.setAttribute('aria-checked', this.getAttribute('aria-checked') === 'true' ? 'false' : 'true')"></button>
+            <span style="color: var(--ink-secondary); font-size: 13px;">开机自启</span>
+          </div>
+          <div class="demo__row" style="margin-top: 12px;">
+            <button class="switch" aria-checked="true" onclick="this.setAttribute('aria-checked', this.getAttribute('aria-checked') === 'true' ? 'false' : 'true')"></button>
+            <span style="color: var(--ink-secondary); font-size: 13px;">全屏提醒</span>
+          </div>
+        </div>
+
+        <div class="demo">
+          <div class="demo__title">Slider · 滑块</div>
+          <div class="slider-wrap">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 12px; color: var(--ink-secondary);">
+              <span>喝水间隔</span><span style="font-family: 'Fraunces', serif; font-variant-numeric: oldstyle-nums;">60 min</span>
+            </div>
+            <input class="slider" type="range" min="15" max="120" value="60" />
+          </div>
+          <div class="slider-wrap" style="margin-top: 16px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 12px; color: var(--ink-secondary);">
+              <span>站立间隔</span><span style="font-family: 'Fraunces', serif; font-variant-numeric: oldstyle-nums;">45 min</span>
+            </div>
+            <input class="slider" type="range" min="15" max="120" value="45" />
+          </div>
+        </div>
+
+        <div class="demo">
+          <div class="demo__title">Stepper · 数字加减</div>
+          <div class="demo__row">
+            <div class="stepper">
+              <button class="stepper__btn">−</button>
+              <span class="stepper__value">10 min</span>
+              <button class="stepper__btn">+</button>
+            </div>
+            <div class="stepper">
+              <button class="stepper__btn">−</button>
+              <span class="stepper__value">5 min</span>
+              <button class="stepper__btn">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Plant Illustration -->
+    <section class="section">
+      <div class="section__head">
+        <span class="section__no">05</span>
+        <h2 class="section__title">插画 / Plant Illustrations</h2>
+      </div>
+      <div class="divider"></div>
+      <p class="section__sub">手账水彩风格:1.5px 描线 + 半透明色块 + 纸纹叠加。V1 必备 3 个变体(normal / thirsty / just-watered)。</p>
+
+      <div class="grid grid--components" style="margin-top: 24px;">
+        <div class="demo" style="text-align: center;">
+          <div class="demo__title" style="text-align: left;">normal · 默认</div>
+          <div style="display: grid; place-items: center; padding: 24px 0;">
+            <svg class="plant" width="180" height="180" viewBox="0 0 180 180">
+              <!-- pot -->
+              <path d="M60 140 L120 140 L115 165 L65 165 Z" fill="#B58A60" opacity="0.85" stroke="#2D3A2F" stroke-width="1.5" stroke-linejoin="round"/>
+              <ellipse cx="90" cy="140" rx="30" ry="4" fill="#8B6A4A" opacity="0.6"/>
+              <!-- stem -->
+              <path d="M90 140 Q88 110 90 80" fill="none" stroke="#4F7A56" stroke-width="2" stroke-linecap="round"/>
+              <!-- leaves -->
+              <ellipse cx="78" cy="100" rx="22" ry="10" fill="#7CA982" opacity="0.85" transform="rotate(-30 78 100)" stroke="#2D3A2F" stroke-width="1.5"/>
+              <ellipse cx="102" cy="90" rx="22" ry="10" fill="#7CA982" opacity="0.85" transform="rotate(30 102 90)" stroke="#2D3A2F" stroke-width="1.5"/>
+              <ellipse cx="90" cy="65" rx="14" ry="18" fill="#8FB996" opacity="0.9" stroke="#2D3A2F" stroke-width="1.5"/>
+              <!-- leaf veins -->
+              <path d="M65 100 Q75 100 88 100" fill="none" stroke="#4F7A56" stroke-width="0.8" opacity="0.6"/>
+              <path d="M95 90 Q105 90 118 90" fill="none" stroke="#4F7A56" stroke-width="0.8" opacity="0.6"/>
+            </svg>
+          </div>
+          <div style="font-size: 12px; color: var(--ink-tertiary); font-style: italic;">翠绿,直立,缓摇 ±2° / 2400ms</div>
+        </div>
+
+        <div class="demo" style="text-align: center;">
+          <div class="demo__title" style="text-align: left;">thirsty · 缺水</div>
+          <div style="display: grid; place-items: center; padding: 24px 0;">
+            <svg class="plant plant--thirsty" width="180" height="180" viewBox="0 0 180 180">
+              <path d="M60 140 L120 140 L115 165 L65 165 Z" fill="#B58A60" opacity="0.85" stroke="#2D3A2F" stroke-width="1.5" stroke-linejoin="round"/>
+              <ellipse cx="90" cy="140" rx="30" ry="4" fill="#8B6A4A" opacity="0.6"/>
+              <path d="M90 140 Q86 115 88 95" fill="none" stroke="#7A8A7B" stroke-width="2" stroke-linecap="round"/>
+              <ellipse cx="74" cy="115" rx="20" ry="9" fill="#A8B8AA" opacity="0.8" transform="rotate(-50 74 115)" stroke="#2D3A2F" stroke-width="1.5"/>
+              <ellipse cx="100" cy="105" rx="20" ry="9" fill="#A8B8AA" opacity="0.8" transform="rotate(20 100 105)" stroke="#2D3A2F" stroke-width="1.5"/>
+              <ellipse cx="88" cy="85" rx="12" ry="16" fill="#B5C5B7" opacity="0.85" stroke="#2D3A2F" stroke-width="1.5"/>
+            </svg>
+          </div>
+          <div style="font-size: 12px; color: var(--ink-tertiary); font-style: italic;">灰绿,微垂,急促摇 ±4° / 1800ms</div>
+        </div>
+
+        <div class="demo" style="text-align: center;">
+          <div class="demo__title" style="text-align: left;">just-watered · 刚浇过</div>
+          <div style="display: grid; place-items: center; padding: 24px 0;">
+            <svg class="plant plant--done" width="180" height="180" viewBox="0 0 180 180">
+              <path d="M60 140 L120 140 L115 165 L65 165 Z" fill="#B58A60" opacity="0.85" stroke="#2D3A2F" stroke-width="1.5" stroke-linejoin="round"/>
+              <ellipse cx="90" cy="140" rx="30" ry="4" fill="#8B6A4A" opacity="0.6"/>
+              <path d="M90 140 Q88 108 90 75" fill="none" stroke="#4F7A56" stroke-width="2" stroke-linecap="round"/>
+              <ellipse cx="76" cy="95" rx="24" ry="11" fill="#7CA982" opacity="0.9" transform="rotate(-32 76 95)" stroke="#2D3A2F" stroke-width="1.5"/>
+              <ellipse cx="104" cy="85" rx="24" ry="11" fill="#7CA982" opacity="0.9" transform="rotate(32 104 85)" stroke="#2D3A2F" stroke-width="1.5"/>
+              <ellipse cx="90" cy="58" rx="16" ry="20" fill="#A8C8AE" opacity="0.95" stroke="#2D3A2F" stroke-width="1.5"/>
+              <!-- sun glow on top leaf -->
+              <circle cx="90" cy="48" r="6" fill="#E8B860" opacity="0.5"/>
+            </svg>
+          </div>
+          <div style="font-size: 12px; color: var(--ink-tertiary); font-style: italic;">深绿,叶尖暖光,leaf-lift 弹起</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Windows -->
+    <section class="section">
+      <div class="section__head">
+        <span class="section__no">06</span>
+        <h2 class="section__title">窗口 / Windows</h2>
+      </div>
+      <div class="divider"></div>
+      <p class="section__sub">V1 没有主窗口。所有 UI 都是独立窗口。Overlay 600×420、Onboard/Settings 480×640。</p>
+
+      <h3 style="font-size: 16px; color: var(--ink-primary); margin: 32px 0 16px; font-weight: 500;">6.1 Overlay · 提醒窗口</h3>
+      <p class="section__sub" style="margin-bottom: 16px;">全屏半透明罩 + 居中 600×420 植物志卡片。以插画为主,词为辅。</p>
+
+      <div class="overlay-screen" style="max-width: 800px; margin: 0 auto;">
+        <div class="overlay-screen__bg-bars"></div>
+        <div class="overlay-screen__chrome">
+          <span>Water Me · iPhone 15 Pro</span>
+          <span>14:30 · Reminder</span>
+        </div>
+        <!-- fake "desktop" content behind -->
+        <div style="position: absolute; inset: 0; padding: 60px 24px 24px; opacity: 0.4; pointer-events: none;">
+          <div style="height: 24px; background: var(--border-line); border-radius: 2px; width: 40%; margin-bottom: 12px;"></div>
+          <div style="height: 12px; background: var(--border-line); border-radius: 2px; width: 80%; margin-bottom: 8px; opacity: 0.6;"></div>
+          <div style="height: 12px; background: var(--border-line); border-radius: 2px; width: 60%; margin-bottom: 8px; opacity: 0.6;"></div>
+          <div style="height: 12px; background: var(--border-line); border-radius: 2px; width: 70%; opacity: 0.6;"></div>
+        </div>
+        <div class="overlay-mask"></div>
+        <div class="overlay-card stagger">
+          <span class="overlay-card__date">Water Me · 2026.07.22 14:30</span>
+          <span class="overlay-card__type">💧 water</span>
+          <div class="overlay-card__plant">
+            <svg class="plant" width="160" height="160" viewBox="0 0 180 180">
+              <path d="M60 140 L120 140 L115 165 L65 165 Z" fill="#B58A60" opacity="0.85" stroke="#2D3A2F" stroke-width="1.5" stroke-linejoin="round"/>
+              <ellipse cx="90" cy="140" rx="30" ry="4" fill="#8B6A4A" opacity="0.6"/>
+              <path d="M90 140 Q88 110 90 80" fill="none" stroke="#4F7A56" stroke-width="2" stroke-linecap="round"/>
+              <ellipse cx="78" cy="100" rx="22" ry="10" fill="#7CA982" opacity="0.85" transform="rotate(-30 78 100)" stroke="#2D3A2F" stroke-width="1.5"/>
+              <ellipse cx="102" cy="90" rx="22" ry="10" fill="#7CA982" opacity="0.85" transform="rotate(30 102 90)" stroke="#2D3A2F" stroke-width="1.5"/>
+              <ellipse cx="90" cy="65" rx="14" ry="18" fill="#8FB996" opacity="0.9" stroke="#2D3A2F" stroke-width="1.5"/>
+            </svg>
+          </div>
+          <h3 class="overlay-card__title">去给自己接一杯水。</h3>
+          <p class="overlay-card__sub">May I trouble you for a glass of water?</p>
+          <div class="overlay-card__divider">
+            <span class="overlay-card__duration">60 min</span>
+          </div>
+          <div class="overlay-card__actions">
+            <button class="btn btn--primary btn--pulse">我喝了</button>
+            <button class="btn btn--secondary">10 分钟后</button>
+            <button class="btn btn--tertiary">今天跳过</button>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="font-size: 16px; color: var(--ink-primary); margin: 48px 0 16px; font-weight: 500;">6.2 Onboard · 首次启动</h3>
+
+      <div class="grid grid--windows" style="margin-top: 16px;">
+        <!-- Step 1 -->
+        <div class="win win--onboard">
+          <div class="win__chrome">
+            <span class="win__dot"></span><span class="win__dot"></span><span class="win__dot"></span>
+            <span style="margin-left: 12px;">Water Me — Onboard · Step 1 / 2</span>
+          </div>
+          <div class="win__body">
+            <div class="onboard">
+              <div class="onboard__head">
+                <div class="onboard__plant">
+                  <svg class="plant" width="120" height="120" viewBox="0 0 180 180">
+                    <path d="M60 140 L120 140 L115 165 L65 165 Z" fill="#B58A60" opacity="0.85" stroke="#2D3A2F" stroke-width="1.5" stroke-linejoin="round"/>
+                    <ellipse cx="90" cy="140" rx="30" ry="4" fill="#8B6A4A" opacity="0.6"/>
+                    <path d="M90 140 Q88 110 90 80" fill="none" stroke="#4F7A56" stroke-width="2" stroke-linecap="round"/>
+                    <ellipse cx="78" cy="100" rx="22" ry="10" fill="#7CA982" opacity="0.85" transform="rotate(-30 78 100)" stroke="#2D3A2F" stroke-width="1.5"/>
+                    <ellipse cx="102" cy="90" rx="22" ry="10" fill="#7CA982" opacity="0.85" transform="rotate(30 102 90)" stroke="#2D3A2F" stroke-width="1.5"/>
+                    <ellipse cx="90" cy="65" rx="14" ry="18" fill="#8FB996" opacity="0.9" stroke="#2D3A2F" stroke-width="1.5"/>
+                  </svg>
+                </div>
+                <h2 class="onboard__title">Water Me</h2>
+                <p class="onboard__sub">Humans need watering, too.</p>
+              </div>
+              <div class="onboard__divider"></div>
+              <p class="onboard__body">我会在你工作太久的时候,轻轻提醒你照顾自己。</p>
+              <div class="onboard__privacy">
+                <h4>隐私承诺</h4>
+                <ul>
+                  <li>不联网</li>
+                  <li>不上传任何数据</li>
+                  <li>不记录键盘内容</li>
+                  <li>不记录鼠标坐标</li>
+                  <li>只监测"有没有在用电脑"</li>
+                </ul>
+              </div>
+              <div class="onboard__footer">
+                <div class="onboard__dots">
+                  <span class="onboard__dot onboard__dot--active"></span>
+                  <span class="onboard__dot"></span>
+                </div>
+                <button class="btn btn--primary">下一步 →</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="win win--onboard">
+          <div class="win__chrome">
+            <span class="win__dot"></span><span class="win__dot"></span><span class="win__dot"></span>
+            <span style="margin-left: 12px;">Water Me — Onboard · Step 2 / 2</span>
+          </div>
+          <div class="win__body">
+            <div class="onboard">
+              <div class="onboard__head">
+                <div class="onboard__dots" style="margin-top: 0;">
+                  <span class="onboard__dot"></span>
+                  <span class="onboard__dot onboard__dot--active"></span>
+                </div>
+                <h2 class="onboard__title" style="margin-top: 24px;">已经准备好陪你。</h2>
+                <p class="onboard__sub">默认配置(可直接开始使用)</p>
+              </div>
+              <div class="onboard__divider"></div>
+              <div>
+                <div class="onboard__setting">
+                  <div>
+                    <span class="onboard__setting-label">喝水间隔</span>
+                    <span class="onboard__setting-desc">每工作 60 分钟提醒一次。</span>
+                  </div>
+                  <span style="font-family: 'Fraunces', serif; font-variant-numeric: oldstyle-nums; color: var(--ink-secondary);">60 min</span>
+                </div>
+                <div class="onboard__setting">
+                  <div>
+                    <span class="onboard__setting-label">站立间隔</span>
+                    <span class="onboard__setting-desc">每工作 45 分钟提醒一次。</span>
+                  </div>
+                  <span style="font-family: 'Fraunces', serif; font-variant-numeric: oldstyle-nums; color: var(--ink-secondary);">45 min</span>
+                </div>
+                <div class="onboard__setting">
+                  <div>
+                    <span class="onboard__setting-label">闲置暂停</span>
+                    <span class="onboard__setting-desc">多久没动就暂停计时。</span>
+                  </div>
+                  <span style="font-family: 'Fraunces', serif; font-variant-numeric: oldstyle-nums; color: var(--ink-secondary);">5 min</span>
+                </div>
+                <div class="onboard__setting">
+                  <div>
+                    <span class="onboard__setting-label">开机自动启动</span>
+                  </div>
+                  <button class="switch" aria-checked="false" onclick="this.setAttribute('aria-checked', this.getAttribute('aria-checked') === 'true' ? 'false' : 'true')"></button>
+                </div>
+              </div>
+              <div class="onboard__footer">
+                <button class="btn btn--tertiary">← 上一步</button>
+                <button class="btn btn--primary">开始使用</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="font-size: 16px; color: var(--ink-primary); margin: 48px 0 16px; font-weight: 500;">6.3 Settings · 设置</h3>
+
+      <div class="win win--settings" style="max-width: 480px; margin: 16px auto 0;">
+        <div class="win__chrome">
+          <span class="win__dot"></span><span class="win__dot"></span><span class="win__dot"></span>
+          <span style="margin-left: 12px;">Water Me — Settings</span>
+        </div>
+        <div class="win__body">
+          <div class="settings">
+            <div class="settings__head">
+              <button class="settings__back">←</button>
+              <h3 class="settings__title">Water Me · 设置</h3>
+            </div>
+            <div class="settings__body">
+              <div class="settings__section">
+                <h4 class="settings__section-title">提醒</h4>
+                <div class="settings__section-rule"></div>
+                <div class="settings__row">
+                  <div class="settings__row-main">
+                    <div class="settings__row-title">喝水间隔</div>
+                    <div class="settings__row-desc">每工作 60 分钟提醒一次。</div>
+                  </div>
+                  <div class="settings__row-value">60 min <span style="color: var(--ink-tertiary);">▸</span></div>
+                </div>
+                <div class="settings__row">
+                  <div class="settings__row-main">
+                    <div class="settings__row-title">站立间隔</div>
+                    <div class="settings__row-desc">每工作 45 分钟提醒一次。</div>
+                  </div>
+                  <div class="settings__row-value">45 min <span style="color: var(--ink-tertiary);">▸</span></div>
+                </div>
+                <div class="settings__row">
+                  <div class="settings__row-main">
+                    <div class="settings__row-title">闲置暂停</div>
+                    <div class="settings__row-desc">多久没动就暂停计时。</div>
+                  </div>
+                  <div class="settings__row-value">5 min <span style="color: var(--ink-tertiary);">▸</span></div>
+                </div>
+                <div class="settings__row">
+                  <div class="settings__row-main">
+                    <div class="settings__row-title">Snooze 间隔</div>
+                    <div class="settings__row-desc">点"N 分钟后"时多久再提醒。</div>
+                  </div>
+                  <div class="settings__row-value">10 min <span style="color: var(--ink-tertiary);">▸</span></div>
+                </div>
+              </div>
+              <div class="settings__section">
+                <h4 class="settings__section-title">系统</h4>
+                <div class="settings__section-rule"></div>
+                <div class="settings__row">
+                  <div class="settings__row-main">
+                    <div class="settings__row-title">开机自动启动</div>
+                  </div>
+                  <button class="switch" aria-checked="false" onclick="this.setAttribute('aria-checked', this.getAttribute('aria-checked') === 'true' ? 'false' : 'true')"></button>
+                </div>
+                <div class="settings__row">
+                  <div class="settings__row-main">
+                    <div class="settings__row-title">全屏提醒</div>
+                    <div class="settings__row-desc">游戏中/演示中默认不打扰。</div>
+                  </div>
+                  <button class="switch" aria-checked="true" onclick="this.setAttribute('aria-checked', this.getAttribute('aria-checked') === 'true' ? 'false' : 'true')"></button>
+                </div>
+              </div>
+            </div>
+            <div class="settings__foot">
+              <span>v0.1.0</span>
+              <a href="#">隐私承诺</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="font-size: 16px; color: var(--ink-primary); margin: 48px 0 16px; font-weight: 500;">6.4 Tray · 系统托盘</h3>
+      <p class="section__sub" style="margin-bottom: 16px;">托盘常驻,右键菜单。暂停/恢复切换显示。</p>
+
+      <div class="tray-menu" style="margin: 16px auto 0;">
+        <div class="tray-menu__item tray-menu__item--head">🌱 Water Me</div>
+        <div class="tray-menu__sep"></div>
+        <div class="tray-menu__item">暂停提醒</div>
+        <div class="tray-menu__item">立即喝水 💧</div>
+        <div class="tray-menu__sep"></div>
+        <div class="tray-menu__item">设置</div>
+        <div class="tray-menu__sep"></div>
+        <div class="tray-menu__item tray-menu__item--danger">退出</div>
+      </div>
+    </section>
+
+    <!-- 7. Copy system -->
+    <section class="section">
+      <div class="section__head">
+        <span class="section__no">07</span>
+        <h2 class="section__title">文案 / Copy</h2>
+      </div>
+      <div class="divider"></div>
+      <p class="section__sub">永远不指责,永远邀请,永远留余地。</p>
+
+      <h4 style="margin: 24px 0 12px; font-size: 13px; color: var(--ink-secondary); font-weight: 500; font-family: 'Fraunces', serif; font-style: italic;">✓ 好的文案</h4>
+      <div class="copy-example">
+        <div class="copy-example__tag">overlay · water</div>
+        去给自己接一杯水。<br />
+        <span style="color: var(--ink-secondary); font-style: italic; font-family: 'Fraunces', serif; font-size: 13px;">May I trouble you for a glass of water?</span>
+      </div>
+      <div class="copy-example">
+        <div class="copy-example__tag">onboard · 主体</div>
+        我会在你工作太久的时候,轻轻提醒你照顾自己。
+      </div>
+      <div class="copy-example">
+        <div class="copy-example__tag">error · 设置损坏</div>
+        设置文件已恢复为默认值。
+      </div>
+
+      <h4 style="margin: 32px 0 12px; font-size: 13px; color: #C77A7A; font-weight: 500; font-family: 'Fraunces', serif; font-style: italic;">✗ 永远不写</h4>
+      <div class="copy-example copy-example--bad">
+        <div class="copy-example__tag">命令式</div>
+        请立即喝水。
+      </div>
+      <div class="copy-example copy-example--bad">
+        <div class="copy-example__tag">指责式</div>
+        你今天没喝水,失败。
+      </div>
+      <div class="copy-example copy-example--bad">
+        <div class="copy-example__tag">警告式</div>
+        警告:工作时间过长!
+      </div>
+    </section>
+
+    <!-- 8. Motion -->
+    <section class="section">
+      <div class="section__head">
+        <span class="section__no">08</span>
+        <h2 class="section__title">动效 / Motion</h2>
+      </div>
+      <div class="divider"></div>
+      <p class="section__sub">错峰 80ms / 摇曳 2400ms / 入场 ≤ 320ms / `prefers-reduced-motion` 全降级。</p>
+
+      <div class="grid grid--components" style="margin-top: 24px;">
+        <div class="demo" style="text-align: center;">
+          <div class="demo__title" style="text-align: left;">sway · 植物摇曳</div>
+          <div style="display: grid; place-items: center; padding: 24px 0;">
+            <svg class="plant" width="120" height="120" viewBox="0 0 180 180">
+              <path d="M60 140 L120 140 L115 165 L65 165 Z" fill="#B58A60" opacity="0.85" stroke="#2D3A2F" stroke-width="1.5"/>
+              <path d="M90 140 Q88 110 90 80" fill="none" stroke="#4F7A56" stroke-width="2" stroke-linecap="round"/>
+              <ellipse cx="78" cy="100" rx="22" ry="10" fill="#7CA982" opacity="0.85" transform="rotate(-30 78 100)" stroke="#2D3A2F" stroke-width="1.5"/>
+              <ellipse cx="102" cy="90" rx="22" ry="10" fill="#7CA982" opacity="0.85" transform="rotate(30 102 90)" stroke="#2D3A2F" stroke-width="1.5"/>
+              <ellipse cx="90" cy="65" rx="14" ry="18" fill="#8FB996" opacity="0.9" stroke="#2D3A2F" stroke-width="1.5"/>
+            </svg>
+          </div>
+          <div style="font-size: 11px; color: var(--ink-tertiary);">2400ms · ease-in-out-soft · infinite</div>
+        </div>
+
+        <div class="demo">
+          <div class="demo__title">stagger · 错峰出现(刷新页面查看)</div>
+          <div class="demo__stack stagger">
+            <div style="background: var(--bg-elevated); border: 1px solid var(--border-line); border-radius: 4px; padding: 12px 16px; font-size: 14px;">① 插画上浮</div>
+            <div style="background: var(--bg-elevated); border: 1px solid var(--border-line); border-radius: 4px; padding: 12px 16px; font-size: 14px;">② 标题上浮</div>
+            <div style="background: var(--bg-elevated); border: 1px solid var(--border-line); border-radius: 4px; padding: 12px 16px; font-size: 14px;">③ 副文上浮</div>
+            <div style="background: var(--bg-elevated); border: 1px solid var(--border-line); border-radius: 4px; padding: 12px 16px; font-size: 14px;">④ 按钮上浮</div>
+          </div>
+          <button class="btn btn--secondary" style="margin-top: 16px;" onclick="this.parentElement.querySelector('.stagger').style.animation='none';void this.offsetWidth;this.parentElement.querySelector('.stagger').style.animation=''">重放</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <div class="footer">
+      <span>Water Me — UI/UX Preview v0.1.0</span>
+      <span>基于 docs/05-UIUX.md · 2026.07.22</span>
+    </div>
+  </main>
+
+  <!-- Live Overlay Demo -->
+  <div class="demo-overlay" id="liveOverlay">
+    <button class="demo-overlay__close" onclick="document.getElementById('liveOverlay').classList.remove('is-open')">关闭 (Esc)</button>
+    <div class="overlay-card stagger" style="max-width: 600px; width: 90%;">
+      <span class="overlay-card__date">Water Me · 2026.07.22 14:30</span>
+      <span class="overlay-card__type">💧 water</span>
+      <div class="overlay-card__plant">
+        <svg class="plant" width="200" height="200" viewBox="0 0 180 180">
+          <path d="M60 140 L120 140 L115 165 L65 165 Z" fill="#B58A60" opacity="0.85" stroke="#2D3A2F" stroke-width="1.5" stroke-linejoin="round"/>
+          <ellipse cx="90" cy="140" rx="30" ry="4" fill="#8B6A4A" opacity="0.6"/>
+          <path d="M90 140 Q88 110 90 80" fill="none" stroke="#4F7A56" stroke-width="2" stroke-linecap="round"/>
+          <ellipse cx="78" cy="100" rx="22" ry="10" fill="#7CA982" opacity="0.85" transform="rotate(-30 78 100)" stroke="#2D3A2F" stroke-width="1.5"/>
+          <ellipse cx="102" cy="90" rx="22" ry="10" fill="#7CA982" opacity="0.85" transform="rotate(30 102 90)" stroke="#2D3A2F" stroke-width="1.5"/>
+          <ellipse cx="90" cy="65" rx="14" ry="18" fill="#8FB996" opacity="0.9" stroke="#2D3A2F" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <h3 class="overlay-card__title">去给自己接一杯水。</h3>
+      <p class="overlay-card__sub">May I trouble you for a glass of water?</p>
+      <div class="overlay-card__divider">
+        <span class="overlay-card__duration">60 min</span>
+      </div>
+      <div class="overlay-card__actions">
+        <button class="btn btn--primary btn--pulse" onclick="document.getElementById('liveOverlay').classList.remove('is-open')">我喝了</button>
+        <button class="btn btn--secondary" onclick="document.getElementById('liveOverlay').classList.remove('is-open')">10 分钟后</button>
+        <button class="btn btn--tertiary" onclick="document.getElementById('liveOverlay').classList.remove('is-open')">今天跳过</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Theme toggle
+    const root = document.documentElement;
+    const themeBtn = document.getElementById('themeToggle');
+    const themeIcon = document.getElementById('themeIcon');
+    const themeLabel = document.getElementById('themeLabel');
+    function setTheme(t) {
+      root.setAttribute('data-theme', t);
+      themeIcon.textContent = t === 'dark' ? '☀️' : '🌙';
+      themeLabel.textContent = t === 'dark' ? 'Light' : 'Dark';
+      try { localStorage.setItem('wm-theme', t); } catch(e) {}
+    }
+    themeBtn.addEventListener('click', () => {
+      const cur = root.getAttribute('data-theme');
+      setTheme(cur === 'dark' ? 'light' : 'dark');
+    });
+    try {
+      const saved = localStorage.getItem('wm-theme');
+      if (saved) setTheme(saved);
+    } catch(e) {}
+
+    // ESC to close overlay demo
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        document.getElementById('liveOverlay').classList.remove('is-open');
+      }
+    });
+  </script>
+</body>
+</html>
