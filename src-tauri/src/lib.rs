@@ -6,6 +6,7 @@ mod commands;
 mod reminder;
 mod store;
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use tauri::{
@@ -21,6 +22,10 @@ use store::{HistoryStore, SettingsStore};
 
 /// 托盘"暂停/恢复"菜单项句柄，用于切换文案。
 struct PauseToggle(MenuItem<tauri::Wry>);
+
+/// 用户主动退出标志。托盘"退出"设为 true，ExitRequested 据此放行。
+/// 无主窗口架构下，窗口关闭默认会触发退出，需阻止；只有主动退出才放行。
+static USER_QUIT: AtomicBool = AtomicBool::new(false);
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -71,10 +76,12 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|_app, event| {
-            // 无主窗口架构：关闭任意窗口不应退出应用。
-            // 托盘常驻，只有托盘菜单"退出"才会真正退出。
+            // 无主窗口架构：窗口关闭默认触发退出，需阻止以保持托盘常驻。
+            // 只有托盘"退出"设了 USER_QUIT 标志才放行。
             if let RunEvent::ExitRequested { api, .. } = event {
-                api.prevent_exit();
+                if !USER_QUIT.load(Ordering::SeqCst) {
+                    api.prevent_exit();
+                }
             }
         });
 }
@@ -141,7 +148,11 @@ fn on_menu_event(app: &AppHandle, event: MenuEvent) {
             reminder::record_manual(app, history.inner(), engine.inner(), "water");
         }
         "wm-settings" => show_settings(app),
-        "wm-quit" => app.exit(0),
+        "wm-quit" => {
+            // 标记主动退出，放行 ExitRequested。
+            USER_QUIT.store(true, Ordering::SeqCst);
+            app.exit(0);
+        }
         _ => {}
     }
 }
