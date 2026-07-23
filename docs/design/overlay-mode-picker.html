@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Water Me — Reminder Mode Picker</title>
+  <style>
+    /* ============================================
+       Design Tokens (mirrored from App.css)
+       ponytail: 浏览器预览用 system serif，避免 CDN 联网
+       ============================================ */
+    :root,
+    [data-theme="light"] {
+      --bg-paper: #F6F2E9;
+      --bg-overlay-mask: rgba(45, 58, 47, 0.42);
+      --bg-card: #FBF8F0;
+      --bg-elevated: #FFFFFF;
+      --bg-hover: rgba(45, 58, 47, 0.04);
+      --ink-primary: #2D3A2F;
+      --ink-secondary: #5C6B5E;
+      --ink-tertiary: #8C978D;
+      --ink-inverse: #F6F2E9;
+      --accent-leaf: #7CA982;
+      --accent-leaf-deep: #4F7A56;
+      --accent-leaf-soft: #D4E4D6;
+      --accent-water: #7AAFC4;
+      --accent-soil: #B58A60;
+      --accent-sun: #E8B860;
+      --border-line: #D9D2C2;
+      --border-card: #E8E0CD;
+      --shadow-card: 0 2px 8px rgba(45, 58, 47, 0.06), 0 1px 2px rgba(45, 58, 47, 0.04);
+      --shadow-elevated: 0 8px 24px rgba(45, 58, 47, 0.10), 0 2px 6px rgba(45, 58, 47, 0.06);
+      --shadow-toast: 0 12px 32px rgba(45, 58, 47, 0.18), 0 4px 10px rgba(45, 58, 47, 0.10);
+      --shadow-popover: 0 12px 32px rgba(45, 58, 47, 0.16), 0 4px 12px rgba(45, 58, 47, 0.10);
+      --paper-grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.18 0 0 0 0 0.23 0 0 0 0 0.18 0 0 0 0.5 0'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.4'/></svg>");
+      --ease-out-natural: cubic-bezier(0.22, 0.61, 0.36, 1);
+      --ease-in-soft: cubic-bezier(0.55, 0.06, 0.68, 0.19);
+      --ease-in-out-soft: cubic-bezier(0.65, 0, 0.35, 1);
+      --ease-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+      --dur-fast: 180ms;
+      --dur-base: 300ms;
+      --dur-loop: 2400ms;
+      --font-serif: "Noto Serif SC", "Fraunces", Georgia, "Songti SC", serif;
+      --font-italic: Georgia, "Fraunces", serif;
+    }
+
+    [data-theme="dark"] {
+      --bg-paper: #1A211C;
+      --bg-overlay-mask: rgba(8, 12, 9, 0.62);
+      --bg-card: #222A23;
+      --bg-elevated: #2C352E;
+      --bg-hover: rgba(255, 255, 255, 0.05);
+      --ink-primary: #E8E4D8;
+      --ink-secondary: #B5BDB0;
+      --ink-tertiary: #7A8478;
+      --ink-inverse: #1A211C;
+      --accent-leaf: #8FB996;
+      --accent-leaf-deep: #A8C8AE;
+      --accent-leaf-soft: #2E3A30;
+      --accent-water: #8AB8CE;
+      --accent-soil: #C7A085;
+      --accent-sun: #EFC477;
+      --border-line: #3A4438;
+      --border-card: #3A4438;
+      --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.30), 0 1px 2px rgba(0, 0, 0, 0.20);
+      --shadow-elevated: 0 8px 24px rgba(0, 0, 0, 0.40), 0 2px 6px rgba(0, 0, 0, 0.25);
+      --shadow-toast: 0 12px 32px rgba(0, 0, 0, 0.50), 0 4px 10px rgba(0, 0, 0, 0.30);
+      --shadow-popover: 0 12px 32px rgba(0, 0, 0, 0.50), 0 4px 12px rgba(0, 0, 0, 0.30);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-serif);
+      background: var(--bg-paper);
+      color: var(--ink-primary);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      padding: 48px 24px 80px;
+    }
+
+    /* ============================================
+       Page Header
+       ============================================ */
+    .page-head {
+      max-width: 960px;
+      margin: 0 auto 36px;
+      text-align: center;
+    }
+    .page-head h1 {
+      font-family: var(--font-serif);
+      font-size: 26px; font-weight: 500;
+      margin: 0 0 6px;
+      letter-spacing: 0.02em;
+    }
+    .page-head p {
+      font-family: var(--font-italic);
+      font-style: italic;
+      font-size: 13px;
+      color: var(--ink-secondary);
+      margin: 0;
+    }
+    .theme-toggle {
+      position: fixed; top: 20px; right: 24px;
+      display: inline-flex;
+      border: 1px solid var(--border-line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--bg-elevated);
+      z-index: 100;
+    }
+    .theme-toggle button {
+      border: none; background: transparent;
+      color: var(--ink-secondary);
+      padding: 8px 14px; font-size: 12px;
+      cursor: pointer; font-family: var(--font-serif);
+      border-right: 1px solid var(--border-line);
+      transition: background 0.15s, color 0.15s;
+    }
+    .theme-toggle button:last-child { border-right: none; }
+    .theme-toggle button.is-active {
+      background: var(--accent-leaf); color: var(--ink-inverse);
+    }
+
+    /* ============================================
+       Settings card — 模拟 Settings 窗口的一个 section
+       ============================================ */
+    .panel {
+      max-width: 960px;
+      margin: 0 auto;
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 8px;
+      box-shadow: var(--shadow-card);
+      padding: 28px 32px 32px;
+      position: relative;
+    }
+    .panel::before {
+      content: ""; position: absolute; inset: 0;
+      background: var(--paper-grain);
+      opacity: 0.04; border-radius: inherit; pointer-events: none;
+    }
+    .section-title {
+      font-family: var(--font-serif);
+      font-size: 14px; font-weight: 500;
+      color: var(--ink-secondary);
+      margin: 0 0 4px;
+    }
+    .section-rule {
+      width: 40px; height: 1px;
+      background: var(--border-line);
+      margin: 0 0 16px;
+    }
+
+    /* ============================================
+       Reminder Mode Row — 下拉选择行
+       ============================================ */
+    .mode-row {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 16px;
+      padding: 16px 8px;
+      border-bottom: 1px solid var(--border-line);
+      margin: 0 -8px;
+      position: relative;
+    }
+    .mode-row__main { flex: 1; min-width: 0; }
+    .mode-row__title {
+      font-size: 15px; color: var(--ink-primary);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .mode-row__desc {
+      font-size: 12px; color: var(--ink-tertiary);
+      margin-top: 2px;
+    }
+    .mode-row__value {
+      display: flex; align-items: center; gap: 8px;
+      flex-shrink: 0;
+    }
+
+    /* Custom Dropdown — 替代原生 select 以支持 hover 气泡 */
+    .dropdown {
+      position: relative;
+      width: 220px;
+    }
+    .dropdown__trigger {
+      width: 100%;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 14px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-line);
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: var(--font-serif);
+      font-size: 14px;
+      color: var(--ink-primary);
+      transition: border-color var(--dur-fast), background var(--dur-fast);
+    }
+    .dropdown__trigger:hover {
+      border-color: var(--accent-leaf);
+    }
+    .dropdown.open .dropdown__trigger {
+      border-color: var(--accent-leaf);
+      background: var(--bg-card);
+    }
+    .dropdown__trigger-label {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .dropdown__caret {
+      transition: transform var(--dur-fast);
+      color: var(--ink-tertiary);
+      font-size: 11px;
+    }
+    .dropdown.open .dropdown__caret { transform: rotate(180deg); }
+
+    .dropdown__panel {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0; right: 0;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-line);
+      border-radius: 8px;
+      box-shadow: var(--shadow-popover);
+      padding: 6px;
+      z-index: 30;
+      opacity: 0;
+      transform: translateY(-8px);
+      pointer-events: none;
+      transition: opacity var(--dur-fast), transform var(--dur-fast);
+    }
+    .dropdown.open .dropdown__panel {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+    .dropdown__option {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--ink-primary);
+      transition: background var(--dur-fast);
+      position: relative;
+    }
+    .dropdown__option:hover {
+      background: var(--accent-leaf-soft);
+    }
+    .dropdown__option.is-selected {
+      color: var(--accent-leaf-deep);
+      font-weight: 500;
+    }
+    .dropdown__option-text { flex: 1; }
+    .dropdown__option-check {
+      color: var(--accent-leaf);
+      opacity: 0;
+      font-size: 12px;
+    }
+    .dropdown__option.is-selected .dropdown__option-check { opacity: 1; }
+
+    /* ============================================
+       Hover Popover — 气泡预览
+       出现在下拉框左侧（右侧空间不足），hover 选项时显示对应模式的迷你动画
+       ============================================ */
+    .popover {
+      position: absolute;
+      top: 0;
+      right: calc(100% + 14px);
+      width: 280px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-line);
+      border-radius: 10px;
+      box-shadow: var(--shadow-popover);
+      padding: 12px;
+      z-index: 40;
+      opacity: 0;
+      transform: translateX(8px);
+      pointer-events: none;
+      transition: opacity var(--dur-fast), transform var(--dur-fast);
+    }
+    .popover.show {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    /* 小箭头指向右侧下拉 */
+    .popover::before {
+      content: "";
+      position: absolute;
+      top: 28px;
+      right: -7px;
+      width: 12px; height: 12px;
+      background: var(--bg-elevated);
+      border-right: 1px solid var(--border-line);
+      border-top: 1px solid var(--border-line);
+      transform: rotate(45deg);
+    }
+    .popover__title {
+      font-family: var(--font-italic);
+      font-style: italic;
+      font-size: 12px;
+      color: var(--ink-tertiary);
+      margin: 0 0 8px;
+      padding: 0 2px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .popover__tag {
+      font-style: normal;
+      font-family: var(--font-serif);
+      font-size: 10px;
+      padding: 2px 6px;
+      background: var(--accent-leaf-soft);
+      color: var(--accent-leaf-deep);
+      border-radius: 3px;
+      letter-spacing: 0.04em;
+    }
+
+    /* ============================================
+       Mini Stage — 气泡内的小型桌面预览
+       动画在这里循环播放，让用户预览效果
+       ============================================ */
+    .mini-stage {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      border-radius: 6px;
+      overflow: hidden;
+      background:
+        radial-gradient(ellipse at 30% 20%, rgba(232,184,96,0.10), transparent 60%),
+        radial-gradient(ellipse at 80% 70%, rgba(122,175,196,0.10), transparent 60%),
+        var(--bg-elevated);
+      border: 1px solid var(--border-line);
+    }
+    .mini-stage__fake-win {
+      position: absolute;
+      top: 14%; left: 10%;
+      width: 52%; height: 56%;
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 4px;
+      opacity: 0.7;
+    }
+    .mini-stage__fake-win::before {
+      content: ""; position: absolute;
+      top: 0; left: 0; right: 0; height: 8px;
+      background: var(--bg-elevated);
+      border-bottom: 1px solid var(--border-line);
+    }
+    .mini-stage__bar {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      height: 8px;
+      background: rgba(45,58,47,0.06);
+      border-top: 1px solid var(--border-line);
+    }
+
+    /* ===== Mini: Mode 1 Fullscreen ===== */
+    .mini-overlay {
+      position: absolute; inset: 0;
+      background: var(--bg-overlay-mask);
+      display: flex; align-items: center; justify-content: center;
+      animation: mini-fade 3s var(--ease-in-out-soft) infinite;
+    }
+    @keyframes mini-fade {
+      0% { opacity: 0; }
+      15% { opacity: 1; }
+      85% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+    .mini-overlay__card {
+      width: 58%;
+      background: var(--bg-card);
+      border-radius: 4px;
+      box-shadow: var(--shadow-elevated);
+      padding: 10px 8px;
+      text-align: center;
+      animation: mini-rise 3s var(--ease-in-out-soft) infinite;
+    }
+    @keyframes mini-rise {
+      0% { opacity: 0; transform: translateY(8px) scale(0.94); }
+      20% { opacity: 1; transform: translateY(0) scale(1); }
+      85% { opacity: 1; transform: translateY(0) scale(1); }
+      100% { opacity: 0; transform: translateY(0) scale(1); }
+    }
+    .mini-overlay__icon { font-size: 14px; }
+    .mini-overlay__title {
+      font-size: 9px; color: var(--ink-primary);
+      margin: 2px 0 1px;
+    }
+    .mini-overlay__bar {
+      height: 2px; width: 18px;
+      background: var(--border-line);
+      margin: 0 auto 4px;
+    }
+    .mini-overlay__btn {
+      display: inline-block;
+      padding: 2px 6px;
+      background: var(--accent-leaf);
+      color: var(--ink-inverse);
+      border-radius: 2px;
+      font-size: 7px;
+    }
+
+    /* ===== Mini: Mode 2 Card Window ===== */
+    .mini-cardwin {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 60%;
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 5px;
+      box-shadow: var(--shadow-elevated);
+      padding: 8px 10px;
+      animation: mini-pop 3s var(--ease-in-out-soft) infinite;
+    }
+    @keyframes mini-pop {
+      0% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+      18% { opacity: 1; transform: translate(-50%, -50%) scale(1.02); }
+      25% { transform: translate(-50%, -50%) scale(1); }
+      85% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+      100% { opacity: 0; transform: translate(-50%, -50%) scale(0.95); }
+    }
+    .mini-cardwin__head {
+      display: flex; align-items: center; gap: 5px;
+      padding-bottom: 5px;
+      border-bottom: 1px solid var(--border-line);
+      margin-bottom: 5px;
+    }
+    .mini-cardwin__icon {
+      width: 14px; height: 14px;
+      background: var(--accent-leaf-soft);
+      border-radius: 50%;
+      display: grid; place-items: center;
+      font-size: 8px;
+    }
+    .mini-cardwin__title { font-size: 9px; font-weight: 500; color: var(--ink-primary); }
+    .mini-cardwin__body { font-size: 7px; color: var(--ink-secondary); margin: 0 0 4px; }
+    .mini-cardwin__actions { display: flex; gap: 3px; justify-content: flex-end; }
+    .mini-cardwin__btn {
+      padding: 2px 5px; border-radius: 2px;
+      font-size: 6px;
+      background: var(--accent-leaf); color: var(--ink-inverse);
+    }
+    .mini-cardwin__btn--ghost { background: transparent; color: var(--ink-tertiary); }
+
+    /* ===== Mini: Mode 3 Toast ===== */
+    .mini-toast {
+      position: absolute;
+      bottom: 12px; right: 8px;
+      width: 60%;
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-left: 2px solid var(--accent-leaf);
+      border-radius: 4px;
+      box-shadow: var(--shadow-toast);
+      padding: 6px 8px 7px;
+      animation: mini-slide 3s var(--ease-in-out-soft) infinite;
+      overflow: hidden;
+    }
+    @keyframes mini-slide {
+      0% { opacity: 0; transform: translateX(20px); }
+      15% { opacity: 1; transform: translateX(0); }
+      85% { opacity: 1; transform: translateX(0); }
+      100% { opacity: 0; transform: translateX(20px); }
+    }
+    .mini-toast__row { display: flex; align-items: center; gap: 5px; }
+    .mini-toast__icon {
+      width: 14px; height: 14px;
+      background: var(--accent-leaf-soft);
+      border-radius: 50%;
+      display: grid; place-items: center;
+      font-size: 8px; flex-shrink: 0;
+    }
+    .mini-toast__title { font-size: 9px; font-weight: 500; }
+    .mini-toast__sub { font-size: 7px; color: var(--ink-tertiary); }
+    .mini-toast__progress {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 1.5px;
+      background: var(--accent-leaf-soft);
+    }
+    .mini-toast__progress::after {
+      content: "";
+      display: block;
+      height: 100%;
+      background: var(--accent-leaf);
+      transform-origin: left;
+      animation: mini-countdown 3s linear infinite;
+    }
+    @keyframes mini-countdown {
+      0% { transform: scaleX(0); }
+      15% { transform: scaleX(0); }
+      85% { transform: scaleX(1); }
+      100% { transform: scaleX(1); }
+    }
+
+    /* ============================================
+       Main Stage — 选中模式的完整动画演示
+       ============================================ */
+    .main-stage-wrap {
+      max-width: 960px;
+      margin: 32px auto 0;
+    }
+    .main-stage-head {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px;
+      padding: 0 4px;
+    }
+    .main-stage-head h2 {
+      font-family: var(--font-serif);
+      font-size: 15px; font-weight: 500;
+      margin: 0; color: var(--ink-secondary);
+    }
+    .replay-btn {
+      font-family: var(--font-serif);
+      font-size: 12px;
+      padding: 6px 14px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-line);
+      border-radius: 5px;
+      color: var(--ink-secondary);
+      cursor: pointer;
+      transition: background var(--dur-fast), border-color var(--dur-fast);
+    }
+    .replay-btn:hover {
+      background: var(--accent-leaf-soft);
+      border-color: var(--accent-leaf);
+      color: var(--accent-leaf-deep);
+    }
+
+    .main-stage {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      max-height: 480px;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--border-line);
+      background:
+        radial-gradient(ellipse at 30% 20%, rgba(232,184,96,0.10), transparent 60%),
+        radial-gradient(ellipse at 80% 70%, rgba(122,175,196,0.10), transparent 60%),
+        var(--bg-elevated);
+      box-shadow: var(--shadow-card);
+    }
+    .main-stage__fake-win {
+      position: absolute;
+      top: 12%; left: 8%;
+      width: 55%; height: 60%;
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 6px;
+      box-shadow: var(--shadow-card);
+      opacity: 0.85;
+    }
+    .main-stage__fake-win::before {
+      content: ""; position: absolute;
+      top: 0; left: 0; right: 0; height: 22px;
+      background: var(--bg-elevated);
+      border-bottom: 1px solid var(--border-line);
+    }
+    .main-stage__fake-win::after {
+      content: "● ● ●";
+      position: absolute; top: 5px; left: 10px;
+      font-size: 7px; color: var(--ink-tertiary);
+      letter-spacing: 3px;
+    }
+    .main-stage__bar {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      height: 24px;
+      background: rgba(45,58,47,0.06);
+      border-top: 1px solid var(--border-line);
+    }
+    .main-stage__bar::before {
+      content: "Water Me";
+      position: absolute; left: 14px; top: 50%;
+      transform: translateY(-50%);
+      font-size: 10px;
+      color: var(--ink-secondary);
+      font-family: var(--font-italic);
+      font-style: italic;
+    }
+
+    /* === Main: Mode 1 Fullscreen Overlay === */
+    .M1 .m1-overlay {
+      position: absolute; inset: 0;
+      background: var(--bg-overlay-mask);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .M1 .m1-card {
+      position: relative;
+      width: 360px; max-width: 90%;
+      background: var(--bg-card);
+      border-radius: 8px;
+      box-shadow: var(--shadow-elevated);
+      padding: 28px 28px 24px;
+      text-align: center;
+    }
+    .M1 .m1-card::before {
+      content: ""; position: absolute; inset: 0;
+      background: var(--paper-grain);
+      opacity: 0.05; border-radius: inherit; pointer-events: none;
+    }
+    .M1 .m1-card__date {
+      position: absolute; top: 12px; left: 16px;
+      font-family: var(--font-italic); font-style: italic;
+      font-size: 10px; color: var(--ink-tertiary);
+    }
+    .M1 .m1-card__type {
+      position: absolute; top: 12px; right: 16px;
+      font-family: var(--font-italic);
+      font-size: 10px; color: var(--accent-water);
+    }
+    .M1 .m1-card__plant {
+      display: grid; place-items: center;
+      margin: 10px 0 14px;
+    }
+    .M1 .m1-card__plant svg {
+      transform-origin: 50% 90%;
+      animation: sway var(--dur-loop) var(--ease-in-out-soft) infinite;
+    }
+    @keyframes sway {
+      0%, 100% { transform: rotate(-2deg); }
+      50% { transform: rotate(2deg); }
+    }
+    .M1 .m1-card__title {
+      font-family: var(--font-serif);
+      font-size: 20px; font-weight: 500;
+      margin: 0 0 4px;
+      letter-spacing: 0.02em;
+    }
+    .M1 .m1-card__sub {
+      font-family: var(--font-italic);
+      font-style: italic;
+      font-size: 11px;
+      color: var(--ink-secondary);
+      margin: 0 0 10px;
+    }
+    .M1 .m1-card__divider {
+      display: grid; place-items: center; gap: 4px;
+      margin: 10px 0 14px;
+    }
+    .M1 .m1-card__divider::before {
+      content: ""; display: block;
+      width: 32px; height: 1px;
+      background: var(--border-line);
+    }
+    .M1 .m1-card__time-range {
+      font-family: var(--font-italic);
+      font-variant-numeric: oldstyle-nums;
+      font-size: 14px;
+      color: var(--ink-secondary);
+      letter-spacing: 0.04em;
+    }
+    .M1 .m1-card__time-sep { margin: 0 6px; color: var(--ink-tertiary); }
+    .M1 .m1-card__duration {
+      font-family: var(--font-italic);
+      font-variant-numeric: oldstyle-nums;
+      font-size: 12px;
+      color: var(--ink-tertiary);
+    }
+    .M1 .m1-card__actions {
+      display: flex; gap: 8px; justify-content: center;
+      margin-top: 6px;
+    }
+    .btn {
+      font-family: var(--font-serif);
+      font-size: 12px; font-weight: 500;
+      line-height: 1;
+      padding: 10px 16px;
+      border-radius: 4px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: background var(--dur-fast);
+      background: transparent;
+      color: var(--ink-primary);
+    }
+    .btn--primary {
+      background: var(--accent-leaf);
+      color: var(--ink-inverse);
+      box-shadow: var(--shadow-card);
+    }
+    .btn--primary:hover { background: var(--accent-leaf-deep); }
+    .btn--secondary {
+      background: transparent;
+      color: var(--ink-primary);
+      border-color: var(--border-line);
+    }
+    .btn--tertiary {
+      background: transparent;
+      color: var(--ink-secondary);
+      padding: 8px 12px;
+      font-size: 11px;
+    }
+
+    /* Main M1 entrance animation */
+    .M1.playing .m1-overlay {
+      animation: m1-fade 0.4s var(--ease-out-natural) both;
+    }
+    .M1.playing .m1-card {
+      animation: m1-rise 0.55s var(--ease-out-natural) 0.08s both;
+    }
+    .M1.playing .m1-card > * {
+      animation: m1-stagger 0.4s var(--ease-out-natural) both;
+    }
+    .M1.playing .m1-card > *:nth-child(1) { animation-delay: 0.16s; }
+    .M1.playing .m1-card > *:nth-child(2) { animation-delay: 0.22s; }
+    .M1.playing .m1-card > *:nth-child(3) { animation-delay: 0.28s; }
+    .M1.playing .m1-card > *:nth-child(4) { animation-delay: 0.34s; }
+    .M1.playing .m1-card > *:nth-child(5) { animation-delay: 0.40s; }
+    .M1.playing .m1-card > *:nth-child(6) { animation-delay: 0.46s; }
+    .M1.playing .m1-card > *:nth-child(7) { animation-delay: 0.52s; }
+    @keyframes m1-fade {
+      from { opacity: 0; } to { opacity: 1; }
+    }
+    @keyframes m1-rise {
+      from { opacity: 0; transform: translateY(24px) scale(0.96); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes m1-stagger {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* === Main: Mode 2 Card Window === */
+    .M2 .m2-card {
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 300px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 10px;
+      box-shadow: var(--shadow-elevated);
+      padding: 20px 22px 18px;
+    }
+    .M2 .m2-card::before {
+      content: ""; position: absolute; inset: 0;
+      background: var(--paper-grain);
+      opacity: 0.05; border-radius: inherit; pointer-events: none;
+    }
+    .M2 .m2-card__close {
+      position: absolute; top: 10px; right: 12px;
+      border: none; background: none;
+      color: var(--ink-tertiary);
+      font-size: 16px; line-height: 1;
+      cursor: pointer;
+      width: 20px; height: 20px;
+      display: grid; place-items: center;
+      border-radius: 50%;
+    }
+    .M2 .m2-card__close:hover { color: var(--ink-primary); background: var(--bg-hover); }
+    .M2 .m2-card__head {
+      display: flex; align-items: center; gap: 10px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-line);
+      margin-bottom: 14px;
+    }
+    .M2 .m2-card__icon {
+      width: 32px; height: 32px;
+      display: grid; place-items: center;
+      background: var(--accent-leaf-soft);
+      border-radius: 50%;
+      font-size: 16px;
+    }
+    .M2 .m2-card__title {
+      font-family: var(--font-serif);
+      font-size: 15px; font-weight: 500;
+      line-height: 1.2;
+    }
+    .M2 .m2-card__time {
+      font-family: var(--font-italic);
+      font-variant-numeric: oldstyle-nums;
+      font-size: 11px;
+      color: var(--ink-tertiary);
+      margin-top: 3px;
+    }
+    .M2 .m2-card__body {
+      font-size: 13px;
+      color: var(--ink-secondary);
+      margin: 0 0 16px;
+      line-height: 1.5;
+    }
+    .M2 .m2-card__body em {
+      font-family: var(--font-italic);
+      font-style: italic;
+      color: var(--ink-tertiary);
+      font-size: 12px;
+    }
+    .M2 .m2-card__actions {
+      display: flex; gap: 8px;
+      justify-content: flex-end;
+    }
+
+    /* Main M2 entrance animation */
+    .M2.playing .m2-card {
+      animation: m2-pop 0.5s var(--ease-back) both;
+    }
+    @keyframes m2-pop {
+      0% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+      60% { opacity: 1; transform: translate(-50%, -50%) scale(1.03); }
+      100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    }
+
+    /* === Main: Mode 3 Toast === */
+    .M3 .m3-toast {
+      position: absolute;
+      bottom: 40px; right: 20px;
+      width: 300px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-left: 3px solid var(--accent-leaf);
+      border-radius: 8px;
+      box-shadow: var(--shadow-toast);
+      padding: 14px 16px 18px;
+      overflow: hidden;
+    }
+    .M3 .m3-toast__row {
+      display: flex; align-items: flex-start; gap: 12px;
+    }
+    .M3 .m3-toast__icon {
+      flex-shrink: 0;
+      width: 34px; height: 34px;
+      display: grid; place-items: center;
+      background: var(--accent-leaf-soft);
+      border-radius: 50%;
+      font-size: 16px;
+    }
+    .M3 .m3-toast__main { flex: 1; min-width: 0; }
+    .M3 .m3-toast__title {
+      font-family: var(--font-serif);
+      font-size: 14px; font-weight: 500;
+      margin: 0 0 2px;
+      line-height: 1.3;
+    }
+    .M3 .m3-toast__sub {
+      font-family: var(--font-italic);
+      font-style: italic;
+      font-size: 11px;
+      color: var(--ink-tertiary);
+      margin: 0 0 4px;
+    }
+    .M3 .m3-toast__time {
+      font-family: var(--font-italic);
+      font-variant-numeric: oldstyle-nums;
+      font-size: 11px;
+      color: var(--ink-secondary);
+    }
+    .M3 .m3-toast__actions {
+      display: flex; gap: 6px;
+      margin-top: 10px;
+    }
+    .M3 .m3-toast__actions .btn { padding: 6px 12px; font-size: 11px; }
+    .M3 .m3-toast__progress {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--accent-leaf-soft);
+      overflow: hidden;
+    }
+    .M3 .m3-toast__progress::after {
+      content: "";
+      display: block;
+      height: 100%;
+      width: 100%;
+      background: var(--accent-leaf);
+      transform-origin: left;
+    }
+
+    /* Main M3 entrance animation */
+    .M3.playing .m3-toast {
+      animation: m3-slide 0.45s var(--ease-out-natural) both;
+    }
+    .M3.playing .m3-toast__progress::after {
+      animation: m3-countdown 6s linear 0.45s forwards;
+    }
+    @keyframes m3-slide {
+      from { opacity: 0; transform: translateX(24px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes m3-countdown {
+      from { transform: scaleX(1); }
+      to { transform: scaleX(0); }
+    }
+
+    /* ============================================
+       Note bar
+       ============================================ */
+    .note {
+      max-width: 960px;
+      margin: 24px auto 0;
+      padding: 14px 18px;
+      background: var(--bg-elevated);
+      border-left: 3px solid var(--accent-leaf);
+      border-radius: 4px;
+      font-size: 12px;
+      color: var(--ink-secondary);
+      line-height: 1.6;
+    }
+    .note strong { color: var(--ink-primary); }
+    .note em {
+      font-family: var(--font-italic);
+      font-style: italic;
+      color: var(--ink-tertiary);
+    }
+  </style>
+</head>
+<body>
+  <div class="theme-toggle">
+    <button data-theme="light" class="is-active">Light</button>
+    <button data-theme="dark">Dark</button>
+  </div>
+
+  <header class="page-head">
+    <h1>Water Me · 提醒方式选择</h1>
+    <p>下拉选择提醒形态 · 悬停选项即时预览动画 · 主舞台播放完整效果</p>
+  </header>
+
+  <!-- ========== Settings Panel ========== -->
+  <section class="panel">
+    <h3 class="section-title">提醒方式</h3>
+    <div class="section-rule"></div>
+
+    <div class="mode-row">
+      <div class="mode-row__main">
+        <div class="mode-row__title">弹窗形态</div>
+        <div class="mode-row__desc">选择提醒时使用的弹窗样式。悬停下拉项可预览动画效果。</div>
+      </div>
+      <div class="mode-row__value">
+        <div class="dropdown" id="dropdown">
+          <button class="dropdown__trigger" id="trigger" aria-haspopup="listbox" aria-expanded="false">
+            <span class="dropdown__trigger-label">
+              <span id="triggerText">全屏遮罩</span>
+            </span>
+            <span class="dropdown__caret">▾</span>
+          </button>
+
+          <div class="dropdown__panel" role="listbox">
+            <!-- Option 1 -->
+            <div class="dropdown__option is-selected" data-mode="M1" role="option" aria-selected="true">
+              <span class="dropdown__option-text">全屏遮罩</span>
+              <span class="dropdown__option-check">✓</span>
+
+              <!-- hover popover -->
+              <div class="popover" data-popover-for="M1">
+                <div class="popover__title">
+                  <span>全屏遮罩 · Fullscreen Overlay</span>
+                  <span class="popover__tag">强阻断</span>
+                </div>
+                <div class="mini-stage">
+                  <div class="mini-stage__fake-win"></div>
+                  <div class="mini-stage__bar"></div>
+                  <div class="mini-overlay">
+                    <div class="mini-overlay__card">
+                      <div class="mini-overlay__icon">💧🧍</div>
+                      <div class="mini-overlay__title">去接杯水</div>
+                      <div class="mini-overlay__bar"></div>
+                      <div class="mini-overlay__btn">我喝了</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Option 2 -->
+            <div class="dropdown__option" data-mode="M2" role="option" aria-selected="false">
+              <span class="dropdown__option-text">独立卡片</span>
+              <span class="dropdown__option-check">✓</span>
+
+              <div class="popover" data-popover-for="M2">
+                <div class="popover__title">
+                  <span>独立卡片 · Card Window</span>
+                  <span class="popover__tag">可拖动</span>
+                </div>
+                <div class="mini-stage">
+                  <div class="mini-stage__fake-win"></div>
+                  <div class="mini-stage__bar"></div>
+                  <div class="mini-cardwin">
+                    <div class="mini-cardwin__head">
+                      <div class="mini-cardwin__icon">💧</div>
+                      <div class="mini-cardwin__title">该喝水了</div>
+                    </div>
+                    <div class="mini-cardwin__body">去接一杯水</div>
+                    <div class="mini-cardwin__actions">
+                      <span class="mini-cardwin__btn mini-cardwin__btn--ghost">跳过</span>
+                      <span class="mini-cardwin__btn">我喝了</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Option 3 -->
+            <div class="dropdown__option" data-mode="M3" role="option" aria-selected="false">
+              <span class="dropdown__option-text">Toast 通知</span>
+              <span class="dropdown__option-check">✓</span>
+
+              <div class="popover" data-popover-for="M3">
+                <div class="popover__title">
+                  <span>Toast · Notification</span>
+                  <span class="popover__tag">自动消失</span>
+                </div>
+                <div class="mini-stage">
+                  <div class="mini-stage__fake-win"></div>
+                  <div class="mini-stage__bar"></div>
+                  <div class="mini-toast">
+                    <div class="mini-toast__row">
+                      <div class="mini-toast__icon">💧</div>
+                      <div>
+                        <div class="mini-toast__title">该喝水了</div>
+                        <div class="mini-toast__sub">15:10 — 15:55</div>
+                      </div>
+                    </div>
+                    <div class="mini-toast__progress"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== Main Stage — 完整动画演示 ========== -->
+  <div class="main-stage-wrap">
+    <div class="main-stage-head">
+      <h2>预览效果 <span style="color:var(--ink-tertiary);font-family:var(--font-italic);font-style:italic;font-size:12px;font-weight:400" id="currentLabel">· 全屏遮罩</span></h2>
+      <button class="replay-btn" id="replayBtn">▶ 重新播放</button>
+    </div>
+    <div class="main-stage" id="mainStage">
+      <div class="main-stage__fake-win"></div>
+      <div class="main-stage__bar"></div>
+
+      <!-- Mode 1 content -->
+      <div class="m1-overlay" style="display:none" id="content-M1">
+        <div class="m1-card">
+          <span class="m1-card__date">Water Me · 2026.07.23 15:55</span>
+          <span class="m1-card__type">💧 water · 🧍 stand</span>
+          <div class="m1-card__plant">
+            <svg width="90" height="100" viewBox="0 0 80 90" xmlns="http://www.w3.org/2000/svg">
+              <path d="M40 88 L40 40" stroke="var(--accent-leaf-deep)" stroke-width="2" fill="none" stroke-linecap="round"/>
+              <path d="M40 50 Q22 40 18 22 Q34 28 40 50" fill="var(--accent-leaf)" opacity="0.9"/>
+              <path d="M40 45 Q58 35 62 18 Q46 24 40 45" fill="var(--accent-leaf)" opacity="0.8"/>
+              <path d="M40 38 Q30 20 32 8 Q42 18 40 38" fill="var(--accent-leaf-deep)" opacity="0.85"/>
+              <path d="M34 88 L46 88 L44 82 L36 82 Z" fill="var(--accent-soil)"/>
+            </svg>
+          </div>
+          <h3 class="m1-card__title">去接杯水，顺便活动一下。</h3>
+          <p class="m1-card__sub">A glass of water, and a stretch.</p>
+          <div class="m1-card__divider">
+            <span class="m1-card__time-range">
+              <span>15:10</span>
+              <span class="m1-card__time-sep">—</span>
+              <span>15:55</span>
+            </span>
+            <span class="m1-card__duration">45 min</span>
+          </div>
+          <div class="m1-card__actions">
+            <button class="btn btn--primary">我喝了</button>
+            <button class="btn btn--secondary">10 分钟后</button>
+            <button class="btn btn--tertiary">今天跳过</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mode 2 content -->
+      <div class="m2-card" style="display:none" id="content-M2">
+        <button class="m2-card__close">×</button>
+        <div class="m2-card__head">
+          <div class="m2-card__icon">💧</div>
+          <div>
+            <div class="m2-card__title">该喝水了</div>
+            <div class="m2-card__time">15:10 — 15:55 · 45 min</div>
+          </div>
+        </div>
+        <p class="m2-card__body">
+          去给自己接一杯水。<br>
+          <em>May I trouble you for a glass of water?</em>
+        </p>
+        <div class="m2-card__actions">
+          <button class="btn btn--tertiary">今天跳过</button>
+          <button class="btn btn--secondary">稍后</button>
+          <button class="btn btn--primary">我喝了</button>
+        </div>
+      </div>
+
+      <!-- Mode 3 content -->
+      <div class="m3-toast" style="display:none" id="content-M3">
+        <div class="m3-toast__row">
+          <div class="m3-toast__icon">💧</div>
+          <div class="m3-toast__main">
+            <h4 class="m3-toast__title">该喝水了</h4>
+            <p class="m3-toast__sub">A glass of water, and a stretch.</p>
+            <p class="m3-toast__time">15:10 — 15:55 · 45 min</p>
+            <div class="m3-toast__actions">
+              <button class="btn btn--tertiary">忽略</button>
+              <button class="btn btn--primary">我喝了</button>
+            </div>
+          </div>
+        </div>
+        <div class="m3-toast__progress"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>原型说明</strong> · 下拉框点击展开后，<em>悬停</em>任一选项会在右侧弹出气泡，循环播放对应形态的迷你动画；
+    点击选项后，下方主舞台会播放该形态的完整入场动画（含起止时间展示）。Light/Dark 切换在右上角。
+  </div>
+
+  <script>
+    const MODES = {
+      M1: { label: "全屏遮罩", desc: "全屏遮罩 · Fullscreen Overlay" },
+      M2: { label: "独立卡片", desc: "独立卡片 · Card Window" },
+      M3: { label: "Toast 通知", desc: "Toast · Notification" },
+    };
+
+    const dropdown = document.getElementById("dropdown");
+    const trigger = document.getElementById("trigger");
+    const triggerText = document.getElementById("triggerText");
+    const options = dropdown.querySelectorAll(".dropdown__option");
+    const popovers = dropdown.querySelectorAll(".popover");
+    const mainStage = document.getElementById("mainStage");
+    const replayBtn = document.getElementById("replayBtn");
+    const currentLabel = document.getElementById("currentLabel");
+
+    let currentMode = "M1";
+    let hidePopoverTimer = null;
+
+    // ===== 下拉开关 =====
+    trigger.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const open = dropdown.classList.toggle("open");
+      trigger.setAttribute("aria-expanded", open);
+      if (!open) hideAllPopovers();
+    });
+    document.addEventListener("click", (e) => {
+      if (!dropdown.contains(e.target)) {
+        dropdown.classList.remove("open");
+        trigger.setAttribute("aria-expanded", "false");
+        hideAllPopovers();
+      }
+    });
+
+    // ===== 选项 hover → 显示对应气泡 =====
+    function hideAllPopovers() {
+      popovers.forEach((p) => p.classList.remove("show"));
+    }
+    options.forEach((opt) => {
+      const mode = opt.dataset.mode;
+      const popover = opt.querySelector(".popover");
+
+      opt.addEventListener("mouseenter", () => {
+        clearTimeout(hidePopoverTimer);
+        hideAllPopovers();
+        if (popover) popover.classList.add("show");
+      });
+      opt.addEventListener("mouseleave", () => {
+        // 短延迟，方便鼠标移到气泡上
+        hidePopoverTimer = setTimeout(hideAllPopovers, 120);
+      });
+      // 气泡本身也支持 hover 保持
+      if (popover) {
+        popover.addEventListener("mouseenter", () => clearTimeout(hidePopoverTimer));
+        popover.addEventListener("mouseleave", () => {
+          hidePopoverTimer = setTimeout(hideAllPopovers, 120);
+        });
+      }
+
+      // 点击选择
+      opt.addEventListener("click", (e) => {
+        e.stopPropagation();
+        selectMode(mode);
+        dropdown.classList.remove("open");
+        trigger.setAttribute("aria-expanded", "false");
+        hideAllPopovers();
+      });
+    });
+
+    // ===== 选择模式 + 主舞台播放 =====
+    function selectMode(mode) {
+      currentMode = mode;
+      const info = MODES[mode];
+      triggerText.textContent = info.label;
+      currentLabel.textContent = "· " + info.desc;
+
+      options.forEach((o) => {
+        const selected = o.dataset.mode === mode;
+        o.classList.toggle("is-selected", selected);
+        o.setAttribute("aria-selected", selected);
+      });
+
+      playMainStage(mode);
+    }
+
+    function playMainStage(mode) {
+      // 重置 stage 类
+      mainStage.className = "main-stage";
+      // 隐藏所有内容
+      ["M1", "M2", "M3"].forEach((m) => {
+        const el = document.getElementById("content-" + m);
+        el.style.display = "none";
+      });
+      // 显示当前内容
+      const content = document.getElementById("content-" + mode);
+      content.style.display = "";
+
+      // 强制 reflow，让动画从头播放
+      void mainStage.offsetWidth;
+      mainStage.classList.add(mode, "playing");
+    }
+
+    replayBtn.addEventListener("click", () => playMainStage(currentMode));
+
+    // ===== 主题切换 =====
+    document.querySelectorAll(".theme-toggle button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const theme = btn.dataset.theme;
+        document.documentElement.dataset.theme = theme;
+        document.querySelectorAll(".theme-toggle button").forEach((b) => b.classList.remove("is-selected"));
+        btn.classList.add("is-active");
+      });
+    });
+
+    // 初始化播放一次
+    playMainStage("M1");
+  </script>
+</body>
+</html>
