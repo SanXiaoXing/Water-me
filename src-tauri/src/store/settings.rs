@@ -19,8 +19,28 @@ pub struct Settings {
     pub snooze_interval_min: u32,
     pub autostart: bool,
     pub fullscreen_reminder: bool,
+    /// 全屏免打扰黑名单（进程 exe basename，大小写不敏感匹配）。
+    /// fullscreen_reminder=true 时，仅前台全屏应用在此列表内才 DND。
+    /// 空列表 = 全屏照常提醒（适合全屏工作的人）。
+    #[serde(default)]
+    pub fullscreen_blocklist: Vec<String>,
+    /// 主题："system"（跟随系统）| "light" | "dark"。默认 system。
+    #[serde(default = "default_theme")]
+    pub theme: String,
+    /// 提醒弹窗形态："fullscreen"（全屏遮罩）| "card"（独立卡片）| "toast"（右下通知条）。
+    /// 默认 fullscreen。See PRD FR-033，原型 docs/design/overlay-mode-picker.html。
+    #[serde(default = "default_overlay_mode")]
+    pub overlay_mode: String,
     pub first_launch: bool,
     pub paused: bool,
+}
+
+fn default_theme() -> String {
+    "system".to_string()
+}
+
+fn default_overlay_mode() -> String {
+    "fullscreen".to_string()
 }
 
 impl Default for Settings {
@@ -33,6 +53,9 @@ impl Default for Settings {
             snooze_interval_min: 10,
             autostart: false,
             fullscreen_reminder: true,
+            fullscreen_blocklist: Vec::new(),
+            theme: default_theme(),
+            overlay_mode: default_overlay_mode(),
             first_launch: true,
             paused: false,
         }

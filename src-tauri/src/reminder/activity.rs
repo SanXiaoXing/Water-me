@@ -69,4 +69,7 @@ pub struct ActivityRuntime {
     pub snooze_until: Option<Instant>,
     pub triggered_at_iso: Option<String>,
     pub working_min_at_trigger: u32,
+    /// 当前计时段的起始时间（上次 accumulated_sec 归零的时刻，本地未持久化）。
+    /// 用于 Overlay 展示"起止时间"区间，方便统计。见 FR-080。
+    pub started_at_iso: String,
 }

@@ -21,6 +21,10 @@ pub struct ReminderTriggered {
     pub title: String,
     pub title_en: String,
     pub duration_min: u32,
+    /// 当前计时段起始时间（上次归零时刻，UTC ISO8601）。Overlay 展示用。
+    pub started_at_iso: String,
+    /// 本次触发时间（UTC ISO8601）。Overlay 展示用，便于统计。
+    pub triggered_at_iso: String,
 }
 
 pub struct EngineState {
@@ -43,6 +47,7 @@ impl EngineState {
                     snooze_until: None,
                     triggered_at_iso: None,
                     working_min_at_trigger: 0,
+                    started_at_iso: HistoryStore::now_utc(),
                 })
                 .collect(),
             current_state: ActivityState::Idle,
@@ -87,8 +92,14 @@ fn engine_loop(
         std::thread::sleep(TICK);
         let s = settings.get();
 
-        // DND：全屏应用时 Activity/Working 继续，仅 Reminder 暂停弹出（FR-014~018）。
-        let dnd = s.fullscreen_reminder && fullscreen::is_fullscreen_dnd();
+        // DND：fullscreen_reminder 启用且当前前台进程在黑名单内才静默（FR-014~018）。
+        // 不要求全屏——窗口模式游戏/非全屏演示也应 DND。空黑名单 = 照常提醒。
+        let current_foreground = fullscreen::current_foreground_process();
+        let dnd = s.fullscreen_reminder
+            && current_foreground
+                .as_ref()
+                .map(|proc| s.fullscreen_blocklist.iter().any(|b| b.eq_ignore_ascii_case(proc)))
+                .unwrap_or(false);
         // idle_threshold_min 是分钟，poll_state 期望秒，需 ×60。
         let new_state = activity::poll_state(s.idle_threshold_min * 60);
 
@@ -126,11 +137,12 @@ fn engine_loop(
         tick_count += 1;
         if tick_count % 5 == 0 {
             eprintln!(
-                "[water-me] state={} dnd={} can_trigger={} paused={} | water={}/{}min stand={}/{}min",
+                "[water-me] state={} dnd={} can_trigger={} paused={} fg={} | water={}/{}min stand={}/{}min",
                 new_state.as_str(),
                 dnd,
                 can_trigger,
                 s.paused,
+                current_foreground.as_deref().unwrap_or("-"),
                 st.activities[0].accumulated_sec / 60,
                 s.water_interval_min,
                 st.activities[1].accumulated_sec / 60,
@@ -139,8 +151,10 @@ fn engine_loop(
         }
 
         if can_trigger {
-            // (cfg, working_min_at_trigger) 对，供 build_payload 取真实工作时长。
-            let mut triggered: Vec<(ActivityConfig, u32)> = Vec::new();
+            // (cfg, working_min, started_at_iso) 对，供 build_payload 取真实工作时长与起始时间。
+            let mut triggered: Vec<(ActivityConfig, u32, String)> = Vec::new();
+            // 同一批触发的活动共享一个触发时间戳（同 tick 内触发，统计上更一致）。
+            let batch_triggered_at = HistoryStore::now_utc();
             for a in st.activities.iter_mut() {
                 let interval_sec = (interval_for(a.cfg.id, &s) as u64) * 60;
                 let fire = match a.state {
@@ -150,17 +164,17 @@ fn engine_loop(
                 };
                 if fire {
                     a.state = RState::Triggered;
-                    let triggered_at = HistoryStore::now_utc();
-                    a.triggered_at_iso = Some(triggered_at.clone());
+                    a.triggered_at_iso = Some(batch_triggered_at.clone());
                     a.working_min_at_trigger = (a.accumulated_sec / 60) as u32;
                     let cfg = a.cfg;
                     let working_min = a.working_min_at_trigger;
-                    triggered.push((cfg, working_min));
+                    let started_at = a.started_at_iso.clone();
+                    triggered.push((cfg, working_min, started_at));
                     // FR-083：已触发即写 History（status: Triggered）。
                     history.append(&HistoryRecord {
                         activity: cfg.id.to_string(),
                         status: "Triggered".to_string(),
-                        triggered_at,
+                        triggered_at: batch_triggered_at.clone(),
                         responded_at: None,
                         working_duration_min: working_min,
                     });
@@ -170,13 +184,13 @@ fn engine_loop(
             if !triggered.is_empty() {
                 eprintln!(
                     "[water-me] TRIGGERED: {:?}",
-                    triggered.iter().map(|(c, m)| format!("{}@{}min", c.id, m)).collect::<Vec<_>>()
+                    triggered.iter().map(|(c, m, _)| format!("{}@{}min", c.id, m)).collect::<Vec<_>>()
                 );
-                let payload = build_payload(&triggered);
+                let payload = build_payload(&triggered, &batch_triggered_at);
                 st.overlay_active = true;
                 st.current_payload = Some(payload.clone());
                 drop(st);
-                show_overlay(&app, &payload);
+                show_overlay(&app, &payload, &s.overlay_mode);
                 let _ = app.emit("reminder-triggered", &payload);
                 continue;
             }
@@ -185,11 +199,14 @@ fn engine_loop(
 }
 
 /// 合并多 Activity 为单一 Overlay（FR-042~045）。按 priority 升序排序，主文案合并。
-fn build_payload(triggered: &[(ActivityConfig, u32)]) -> ReminderTriggered {
-    let mut items: Vec<(ActivityConfig, u32)> = triggered.to_vec();
-    items.sort_by_key(|(a, _)| a.priority);
+fn build_payload(
+    triggered: &[(ActivityConfig, u32, String)],
+    triggered_at_iso: &str,
+) -> ReminderTriggered {
+    let mut items: Vec<(ActivityConfig, u32, String)> = triggered.to_vec();
+    items.sort_by_key(|(a, _, _)| a.priority);
 
-    let ids: Vec<&str> = items.iter().map(|(a, _)| a.id).collect();
+    let ids: Vec<&str> = items.iter().map(|(a, _, _)| a.id).collect();
     let has_water = ids.contains(&"water");
     let has_stand = ids.contains(&"stand");
 
@@ -205,11 +222,17 @@ fn build_payload(triggered: &[(ActivityConfig, u32)]) -> ReminderTriggered {
         )
     };
 
-    let duration_min = items.iter().map(|(_, m)| *m).max().unwrap_or(0);
+    let duration_min = items.iter().map(|(_, m, _)| *m).max().unwrap_or(0);
+    // 取最长工作时长对应的起始时间，保证 start + duration 语义一致（便于统计）。
+    let started_at_iso = items
+        .iter()
+        .find(|(_, m, _)| *m == duration_min)
+        .map(|(_, _, s)| s.clone())
+        .unwrap_or_else(|| triggered_at_iso.to_string());
 
     let activities = items
         .iter()
-        .map(|(c, _)| ActivityInfo {
+        .map(|(c, _, _)| ActivityInfo {
             id: c.id.to_string(),
             name: c.name.to_string(),
             icon: c.icon.to_string(),
@@ -225,32 +248,85 @@ fn build_payload(triggered: &[(ActivityConfig, u32)]) -> ReminderTriggered {
         title,
         title_en,
         duration_min,
+        started_at_iso,
+        triggered_at_iso: triggered_at_iso.to_string(),
     }
 }
 
 /// 创建 / 复用 Overlay 窗口并推送载荷。See ADR-0005（关闭即销毁）。
-fn show_overlay(app: &AppHandle, payload: &ReminderTriggered) {
+/// 按 settings.overlay_mode 创建不同窗口配置：
+/// - "fullscreen"：全屏透明遮罩 + 居中卡片（强阻断）
+/// - "card"：居中独立小窗（360×420，无边框透明）
+/// - "toast"：右下角通知条小窗（300×160，无边框透明）
+fn show_overlay(app: &AppHandle, payload: &ReminderTriggered, mode: &str) {
     if let Some(win) = app.get_webview_window("overlay") {
+        // ponytail: 复用窗口时同步更新配置，确保 mode 切换生效。
+        apply_overlay_mode(&win, mode);
         let _ = win.emit("reminder-triggered", payload);
         return;
     }
     let label = "overlay".to_string();
-    let result = WebviewWindowBuilder::new(app, &label, WebviewUrl::App("index.html".into()))
+    let mut builder = WebviewWindowBuilder::new(app, &label, WebviewUrl::App("index.html".into()))
         .title("Water Me")
-        .fullscreen(true)
         .always_on_top(true)
         .transparent(true)
         .decorations(false)
         .skip_taskbar(true)
-        .resizable(false)
-        .build();
-    match result {
+        .resizable(false);
+
+    match mode {
+        "card" => {
+            builder = builder.inner_size(360.0, 420.0).center();
+        }
+        "toast" => {
+            builder = builder.inner_size(300.0, 160.0);
+        }
+        _ => {
+            builder = builder.fullscreen(true);
+        }
+    }
+
+    match builder.build() {
         Ok(win) => {
+            if mode == "toast" {
+                position_toast(&win);
+            }
             let _ = win.emit("reminder-triggered", payload);
         }
         Err(e) => {
             eprintln!("[water-me] overlay build failed: {e}");
         }
+    }
+}
+
+/// 将已有 overlay 窗口同步为当前 mode 的尺寸 / 位置 / 全屏配置。
+fn apply_overlay_mode(win: &tauri::WebviewWindow, mode: &str) {
+    match mode {
+        "card" => {
+            let _ = win.set_fullscreen(false);
+            let _ = win.set_size(tauri::LogicalSize::new(360.0, 420.0));
+            let _ = win.center();
+        }
+        "toast" => {
+            let _ = win.set_fullscreen(false);
+            let _ = win.set_size(tauri::LogicalSize::new(300.0, 160.0));
+            position_toast(win);
+        }
+        _ => {
+            let _ = win.set_fullscreen(true);
+        }
+    }
+}
+
+/// 将 toast 窗口定位到当前显示器右下角。
+fn position_toast(win: &tauri::WebviewWindow) {
+    if let Ok(Some(monitor)) = win.current_monitor() {
+        let scale = monitor.scale_factor();
+        let log_w = monitor.size().width as f64 / scale;
+        let log_h = monitor.size().height as f64 / scale;
+        let x = log_w - 300.0 - 16.0;
+        let y = log_h - 160.0 - 48.0;
+        let _ = win.set_position(tauri::LogicalPosition::new(x, y));
     }
 }
 
@@ -288,6 +364,7 @@ pub fn complete(
                 a.accumulated_sec = 0; // 重置计时器（FR-039）
                 a.snooze_until = None;
                 a.triggered_at_iso = None;
+                a.started_at_iso = now_iso.clone(); // 新计时段起点
             }
         }
     }
@@ -359,6 +436,7 @@ pub fn skip(
                 a.accumulated_sec = 0; // 重置计时器（FR-041）
                 a.snooze_until = None;
                 a.triggered_at_iso = None;
+                a.started_at_iso = now_iso.clone(); // 新计时段起点
             }
         }
     }
@@ -383,13 +461,14 @@ pub fn record_manual(
             activity: activity_id.to_string(),
             status: "Completed".to_string(),
             triggered_at: now_iso.clone(),
-            responded_at: Some(now_iso),
+            responded_at: Some(now_iso.clone()),
             working_duration_min: (a.accumulated_sec / 60) as u32,
         });
         a.state = RState::Pending;
         a.accumulated_sec = 0;
         a.snooze_until = None;
         a.triggered_at_iso = None;
+        a.started_at_iso = now_iso; // 新计时段起点
     }
     drop(st);
     let _ = app.emit("reminder-completed", serde_json::json!({ "activity": activity_id }));

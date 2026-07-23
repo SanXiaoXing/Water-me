@@ -54,3 +54,10 @@ pub fn complete_onboard(
     let _ = app.emit("settings-changed", &updated);
     updated
 }
+
+/// 当前所有可见、非最小化、非自身进程的顶层窗口列表。
+/// 给 UI"添加黑名单"弹列表选择用。
+#[tauri::command]
+pub fn list_visible_windows() -> Vec<crate::platform::fullscreen::WindowInfo> {
+    crate::platform::fullscreen::list_visible_windows()
+}

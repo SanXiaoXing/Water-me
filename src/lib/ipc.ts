@@ -15,8 +15,32 @@ export interface Settings {
   snooze_interval_min: number;
   autostart: boolean;
   fullscreen_reminder: boolean;
+  /** 全屏免打扰黑名单（进程 exe basename）。 */
+  fullscreen_blocklist: string[];
+  /** 主题："system" | "light" | "dark"。 */
+  theme: string;
+  /** 提醒弹窗形态："fullscreen" | "card" | "toast"。 */
+  overlay_mode: OverlayMode;
   first_launch: boolean;
   paused: boolean;
+}
+
+/** 主题模式。 */
+export type ThemeMode = "system" | "light" | "dark";
+
+/** 提醒弹窗形态。 */
+export type OverlayMode = "fullscreen" | "card" | "toast";
+
+/**
+ * 应用主题到 document。system 模式跟随系统 prefers-color-scheme。
+ * 各窗口挂载时调一次，settings-changed 时再调。
+ */
+export function applyTheme(theme: string): void {
+  const resolved: "light" | "dark" =
+    theme === "dark" ? "dark" :
+    theme === "light" ? "light" :
+    window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  document.documentElement.dataset.theme = resolved;
 }
 
 /** 单个提醒活动信息。镜像 reminder.rs `ActivityInfo`。 */
@@ -36,6 +60,10 @@ export interface ReminderTriggered {
   title: string;
   title_en: string;
   duration_min: number;
+  /** 当前计时段起始时间（上次归零时刻，UTC ISO8601）。 */
+  started_at_iso: string;
+  /** 本次触发时间（UTC ISO8601）。 */
+  triggered_at_iso: string;
 }
 
 /** 活动状态字符串："Idle" | "Working"。镜像 activity.rs `ActivityState::as_str`。 */
@@ -80,6 +108,18 @@ export const getCurrentState = (): Promise<CurrentStatus> =>
 /** Onboard 完成：写入选定设置 + 标记 first_launch=false。 */
 export const completeOnboard = (patch: Partial<Settings>): Promise<Settings> =>
   invoke("complete_onboard", { patch });
+
+/** 可见窗口信息（给黑名单选择用）。镜像 fullscreen.rs `WindowInfo`。 */
+export interface WindowInfo {
+  /** 窗口标题（用户可读）。 */
+  title: string;
+  /** 进程 exe basename（加入黑名单的实际值）。 */
+  process: string;
+}
+
+/** 列出当前所有可见、非自身进程的顶层窗口。 */
+export const listVisibleWindows = (): Promise<WindowInfo[]> =>
+  invoke("list_visible_windows");
 
 // ============ 事件监听 ============
 

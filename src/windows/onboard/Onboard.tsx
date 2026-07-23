@@ -1,6 +1,6 @@
 // Onboard 首次启动引导。两步：欢迎+隐私承诺 / 参数配置+自启开关。
 // See docs/05-UIUX.md §6.2, docs/01-PRD.md FR-074~078。
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import gsap from "gsap";
 
@@ -59,7 +59,9 @@ export function Onboard() {
 
   // 步骤切换/首挂载入场：main 整体上移淡入，内部子元素错落，footer 稍后淡入。
   // 用 fromTo 避免 from 的首帧闪烁；ctx.revert() 在卸载/重跑时还原 inline 样式。
-  useLayoutEffect(() => {
+  // 用 useEffect 而非 useLayoutEffect：先让窗口快速渲染静态内容，再异步跑动画，
+  // 避免动画计算阻塞首次绘制造成卡顿感。
+  useEffect(() => {
     const ctx = gsap.context(() => {
       gsap.fromTo(".onboard__main",
         { opacity: 0, y: 18 },

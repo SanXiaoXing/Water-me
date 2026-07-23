@@ -28,6 +28,7 @@ pub fn run() {
             commands::settings::pause_reminders,
             commands::settings::resume_reminders,
             commands::settings::complete_onboard,
+            commands::settings::list_visible_windows,
             commands::reminder::reminder_complete,
             commands::reminder::reminder_defer,
             commands::reminder::reminder_skip,
