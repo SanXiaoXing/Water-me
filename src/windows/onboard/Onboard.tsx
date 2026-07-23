@@ -1,10 +1,11 @@
 // Onboard 首次启动引导。两步：欢迎+隐私承诺 / 参数配置+自启开关。
 // See docs/05-UIUX.md §6.2, docs/01-PRD.md FR-074~078。
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import gsap from "gsap";
 
-import { Plant } from "./Plant";
-import { completeOnboard, type Settings } from "./lib/ipc";
+import { Plant } from "../../Plant";
+import { completeOnboard, type Settings } from "../../lib/ipc";
 
 // 各间隔的取值范围（与 Settings 一致）。默认值即 state 初值。
 const INTERVALS = {
@@ -54,6 +55,24 @@ export function Onboard() {
   const [water, setWater] = useState(INTERVALS.water.def);
   const [stand, setStand] = useState(INTERVALS.stand.def);
   const [idle, setIdle] = useState(INTERVALS.idle.def);
+  const root = useRef<HTMLDivElement>(null);
+
+  // 步骤切换/首挂载入场：main 整体上移淡入，内部子元素错落，footer 稍后淡入。
+  // 用 fromTo 避免 from 的首帧闪烁；ctx.revert() 在卸载/重跑时还原 inline 样式。
+  useLayoutEffect(() => {
+    const ctx = gsap.context(() => {
+      gsap.fromTo(".onboard__main",
+        { opacity: 0, y: 18 },
+        { opacity: 1, y: 0, duration: 0.42, ease: "power3.out" });
+      gsap.fromTo(".onboard__main > *",
+        { opacity: 0, y: 14 },
+        { opacity: 1, y: 0, duration: 0.38, ease: "power3.out", stagger: 0.06, delay: 0.05 });
+      gsap.fromTo(".onboard__footer",
+        { opacity: 0 },
+        { opacity: 1, duration: 0.42, ease: "power2.out", delay: 0.12 });
+    }, root);
+    return () => ctx.revert();
+  }, [step]);
 
   const finish = () => {
     // 把用户选定的间隔一并写入；first_launch 由后端置 false。
@@ -68,27 +87,29 @@ export function Onboard() {
   };
 
   return (
-    <div className="onboard">
+    <div className="onboard" ref={root}>
       {step === 0 ? (
         <>
-          <div className="onboard__head">
-            <div className="onboard__plant">
-              <Plant variant="normal" size={120} />
+          <div className="onboard__main" key="step-0">
+            <div className="onboard__head">
+              <div className="onboard__plant">
+                <Plant variant="normal" size={120} />
+              </div>
+              <h2 className="onboard__title">Water Me</h2>
+              <p className="onboard__sub">Humans need watering, too.</p>
             </div>
-            <h2 className="onboard__title">Water Me</h2>
-            <p className="onboard__sub">Humans need watering, too.</p>
-          </div>
-          <div className="onboard__divider" />
-          <p className="onboard__body">我会在你工作太久的时候，轻轻提醒你照顾自己。</p>
-          <div className="onboard__privacy">
-            <h4>隐私承诺</h4>
-            <ul>
-              <li>不联网</li>
-              <li>不上传任何数据</li>
-              <li>不记录键盘内容</li>
-              <li>不记录鼠标坐标</li>
-              <li>只监测"有没有在用电脑"</li>
-            </ul>
+            <div className="onboard__divider" />
+            <p className="onboard__body">我会在你工作太久的时候，轻轻提醒你照顾自己。</p>
+            <div className="onboard__privacy">
+              <h4>隐私承诺</h4>
+              <ul>
+                <li>不联网</li>
+                <li>不上传任何数据</li>
+                <li>不记录键盘内容</li>
+                <li>不记录鼠标坐标</li>
+                <li>只监测"有没有在用电脑"</li>
+              </ul>
+            </div>
           </div>
           <div className="onboard__footer">
             <div className="onboard__dots">
@@ -102,18 +123,14 @@ export function Onboard() {
         </>
       ) : (
         <>
-          <div className="onboard__head">
-            <div className="onboard__dots" style={{ marginTop: 0 }}>
-              <span className="onboard__dot" />
-              <span className="onboard__dot onboard__dot--active" />
+          <div className="onboard__main" key="step-1">
+            <div className="onboard__head">
+              <h2 className="onboard__title">
+                已经准备好陪你。
+              </h2>
+              <p className="onboard__sub">调整成你觉得舒服的节奏</p>
             </div>
-            <h2 className="onboard__title" style={{ marginTop: 24 }}>
-              已经准备好陪你。
-            </h2>
-            <p className="onboard__sub">调整成你觉得舒服的节奏</p>
-          </div>
-          <div className="onboard__divider" />
-          <div>
+            <div className="onboard__divider" />
             <div className="onboard__setting">
               <div>
                 <span className="onboard__setting-label">喝水间隔</span>
@@ -166,6 +183,10 @@ export function Onboard() {
             </div>
           </div>
           <div className="onboard__footer">
+            <div className="onboard__dots">
+              <span className="onboard__dot" />
+              <span className="onboard__dot onboard__dot--active" />
+            </div>
             <button className="btn btn--tertiary" onClick={() => setStep(0)}>
               ← 上一步
             </button>

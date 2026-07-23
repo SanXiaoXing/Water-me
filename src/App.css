@@ -299,15 +299,25 @@ body {
   padding: 32px 32px 24px;
   height: 100%;
   display: flex; flex-direction: column;
+  overflow: hidden;
   position: relative;
 }
-.onboard::before {
-  content: ""; position: absolute; top: 0; left: 0; right: 0; height: 8px;
-  background: linear-gradient(90deg, var(--accent-leaf), var(--accent-water));
+.onboard__main {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-line) transparent;
 }
+.onboard__main::-webkit-scrollbar { width: 6px; }
+.onboard__main::-webkit-scrollbar-track { background: transparent; }
+.onboard__main::-webkit-scrollbar-thumb {
+  background: var(--border-line);
+  border-radius: 3px;
+}
+.onboard__main::-webkit-scrollbar-thumb:hover { background: var(--ink-tertiary); }
 .onboard__head {
   display: flex; flex-direction: column; align-items: center;
-  margin-top: 32px;
 }
 .onboard__plant { margin: 16px 0 24px; }
 .onboard__title {
@@ -363,9 +373,11 @@ body {
   color: var(--accent-leaf);
 }
 .onboard__footer {
-  margin-top: auto;
+  flex-shrink: 0;
   display: flex; gap: 12px; justify-content: flex-end;
   padding-top: 16px;
+  margin-top: 16px;
+  border-top: 1px solid var(--border-line);
 }
 .onboard__dots {
   display: flex; gap: 6px; align-items: center;
@@ -420,7 +432,16 @@ body {
 .settings__body {
   flex: 1; overflow: auto;
   padding: 24px 20px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-line) transparent;
 }
+.settings__body::-webkit-scrollbar { width: 6px; }
+.settings__body::-webkit-scrollbar-track { background: transparent; }
+.settings__body::-webkit-scrollbar-thumb {
+  background: var(--border-line);
+  border-radius: 3px;
+}
+.settings__body::-webkit-scrollbar-thumb:hover { background: var(--ink-tertiary); }
 .settings__section { margin-bottom: 28px; }
 .settings__section-title {
   font-family: "Noto Serif SC", serif;

@@ -1,13 +1,14 @@
 // Settings 设置窗口。手账布局：提醒间隔（点击行内编辑）+ 系统开关。
 // See docs/05-UIUX.md §6.3, docs/01-PRD.md FR-047~056/064。
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import gsap from "gsap";
 
 import {
   getSettings,
   onSettingsChanged,
   updateSettings,
   type Settings,
-} from "./lib/ipc";
+} from "../../lib/ipc";
 
 const DEFAULTS: Settings = {
   version: 1,
@@ -44,6 +45,7 @@ const INTERVAL_ROWS: {
 export function Settings() {
   const [settings, setSettings] = useState<Settings>(DEFAULTS);
   const [editing, setEditing] = useState<IntervalField | null>(null);
+  const root = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     getSettings().then(setSettings);
@@ -52,6 +54,22 @@ export function Settings() {
     return () => {
       unlistenP.then((f) => f());
     };
+  }, []);
+
+  // 入场：head 淡入下移，section 错落冒出，foot 稍后淡入。与 Onboard 同款手感。
+  useLayoutEffect(() => {
+    const ctx = gsap.context(() => {
+      gsap.fromTo(".settings__head",
+        { opacity: 0, y: -10 },
+        { opacity: 1, y: 0, duration: 0.36, ease: "power3.out" });
+      gsap.fromTo(".settings__section",
+        { opacity: 0, y: 16 },
+        { opacity: 1, y: 0, duration: 0.4, ease: "power3.out", stagger: 0.08, delay: 0.05 });
+      gsap.fromTo(".settings__foot",
+        { opacity: 0 },
+        { opacity: 1, duration: 0.4, ease: "power2.out", delay: 0.2 });
+    }, root);
+    return () => ctx.revert();
   }, []);
 
   const update = (patch: Partial<Settings>) => {
@@ -64,7 +82,7 @@ export function Settings() {
   };
 
   return (
-    <div className="settings">
+    <div className="settings" ref={root}>
       <div className="settings__head">
         <h3 className="settings__title">Water Me · 设置</h3>
       </div>

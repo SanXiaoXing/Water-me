@@ -2,7 +2,7 @@
 // See docs/05-UIUX.md §6.1, docs/01-PRD.md FR-033~041。
 import { useEffect, useState } from "react";
 
-import { Plant } from "./Plant";
+import { Plant } from "../../Plant";
 import {
   getCurrentReminder,
   onReminderTriggered,
@@ -10,7 +10,7 @@ import {
   reminderDefer,
   reminderSkip,
   type ReminderTriggered,
-} from "./lib/ipc";
+} from "../../lib/ipc";
 
 export function Overlay() {
   const [payload, setPayload] = useState<ReminderTriggered | null>(null);

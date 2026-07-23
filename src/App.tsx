@@ -2,9 +2,9 @@
 // See docs/02-Architecture.md §2（窗口模型）。
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
-import { Overlay } from "./Overlay";
-import { Onboard } from "./Onboard";
-import { Settings } from "./Settings";
+import { Overlay } from "./windows/overlay/Overlay";
+import { Onboard } from "./windows/onboard/Onboard";
+import { Settings } from "./windows/settings/Settings";
 import "./App.css";
 
 const label = getCurrentWindow().label;

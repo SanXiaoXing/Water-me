@@ -1,9 +1,5 @@
-//! Reminder Engine。核心：Working Timer（基于真实工作时长，非时钟）。
+//! Reminder Engine 核心。Working Timer（基于真实工作时长，非时钟）。
 //! See Architecture §3.2-3.3, PRD §4.2-4.4, ADR-0001/0002/0006。
-//!
-//! ponytail: V1 单线程引擎循环，无独立 Event Bus（架构的 Event Bus 用于解耦，
-//! V1 的解耦需求由"引擎 → Tauri 事件 → 前端"这条链路天然满足）。
-//! 升级路径：拆出 EventBus + 独立 Scheduler 线程，接口已对齐 Architecture §3.2。
 
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -12,76 +8,11 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 
 use crate::activity::{self, ActivityState};
-use crate::store::{HistoryRecord, HistoryStore, Settings, SettingsStore};
+use crate::platform::fullscreen;
+use crate::store::{HistoryRecord, HistoryStore, SettingsStore};
 
-/// Health Activity 静态配置。See PRD §4.2 FR-031/032, ADR-0007。
-#[derive(Clone, Copy)]
-struct ActivityConfig {
-    id: &'static str,
-    name: &'static str,
-    icon: &'static str,
-    message_zh: &'static str,
-    message_en: &'static str,
-    action: &'static str,
-    priority: u32,
-}
-
-const ACTIVITIES: &[ActivityConfig] = &[
-    ActivityConfig {
-        id: "water",
-        name: "喝水",
-        icon: "💧",
-        message_zh: "去给自己接一杯水。",
-        message_en: "May I trouble you for a glass of water?",
-        action: "我喝了",
-        priority: 1,
-    },
-    ActivityConfig {
-        id: "stand",
-        name: "站立",
-        icon: "🧍",
-        message_zh: "站起来活动一下。",
-        message_en: "Please stretch a little.",
-        action: "我站了",
-        priority: 2,
-    },
-];
-
-fn interval_for(id: &str, s: &Settings) -> u32 {
-    match id {
-        "water" => s.water_interval_min,
-        "stand" => s.stand_interval_min,
-        _ => 60,
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq)]
-enum RState {
-    Pending,
-    Triggered,
-    Deferred,
-}
-
-struct ActivityRuntime {
-    cfg: ActivityConfig,
-    accumulated_sec: u64,
-    state: RState,
-    snooze_until: Option<Instant>,
-    triggered_at_iso: Option<String>,
-    working_min_at_trigger: u32,
-}
-
-/// 传给前端的 Activity 信息（Overlay 渲染用）。
-#[derive(Clone, Serialize)]
-pub struct ActivityInfo {
-    pub id: String,
-    pub name: String,
-    pub icon: String,
-    pub message: String,
-    pub message_en: String,
-    pub action: String,
-    pub priority: u32,
-}
+use super::activity::{ActivityConfig, ActivityInfo, ActivityRuntime, ACTIVITIES, interval_for};
+use super::state::RState;
 
 /// reminder-triggered 事件载荷。See Architecture §5.2。
 #[derive(Clone, Serialize)]
@@ -93,11 +24,11 @@ pub struct ReminderTriggered {
 }
 
 pub struct EngineState {
-    activities: Vec<ActivityRuntime>,
-    current_state: ActivityState,
-    overlay_active: bool,
-    cooldown_until: Option<Instant>,
-    current_payload: Option<ReminderTriggered>,
+    pub activities: Vec<ActivityRuntime>,
+    pub current_state: ActivityState,
+    pub overlay_active: bool,
+    pub cooldown_until: Option<Instant>,
+    pub current_payload: Option<ReminderTriggered>,
 }
 
 impl EngineState {
@@ -157,7 +88,7 @@ fn engine_loop(
         let s = settings.get();
 
         // DND：全屏应用时 Activity/Working 继续，仅 Reminder 暂停弹出（FR-014~018）。
-        let dnd = s.fullscreen_reminder && activity::is_fullscreen_dnd();
+        let dnd = s.fullscreen_reminder && fullscreen::is_fullscreen_dnd();
         // idle_threshold_min 是分钟，poll_state 期望秒，需 ×60。
         let new_state = activity::poll_state(s.idle_threshold_min * 60);
 
@@ -330,7 +261,7 @@ fn close_overlay(app: &AppHandle) {
     }
 }
 
-// ============ 命令处理（被 commands.rs 调用）============
+// ============ 命令处理（被 commands/ 调用）============
 
 /// 用户点击"我喝了/我站了"（Done）。重置计时器，写 History，设冷却（FR-039/046）。
 pub fn complete(
